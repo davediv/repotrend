@@ -346,7 +346,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Responsive Design
 
-- [ ] **UI-P1-010**: Implement responsive layout for mobile (375px), tablet (768px), and desktop (1440px)
+- [x] **UI-P1-010**: Implement responsive layout for mobile (375px), tablet (768px), and desktop (1440px)
   - **Success Criteria**:
     - At 375px: single-column layout; header stacks vertically if needed; date picker is full-width; cards are full-width; touch targets ≥ 44px
     - At 768px: comfortable spacing; cards may have side padding; date picker inline
@@ -363,6 +363,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Set viewport to 1440px and verify desktop layout
     - Set viewport to 2560px and verify no layout breakage
   - **Dependencies**: UI-P1-001, UI-P1-004, UI-P1-002
+  - **Completed**: 2026-02-22
+  - **Implementation**: Added responsive breakpoints across all components. Mobile (≤640px): toolbar stacks vertically, date picker and view toggle expand full-width, touch targets enlarged to 44px (theme toggle, nav buttons, date display, view toggle via `min-height`), reduced padding/gaps for tighter layouts, smaller rank badges and font sizes. Tablet (641–1024px): increased main content padding. Desktop: unchanged (existing 1200px max-width centered layout). Added `overflow-x: hidden` on html/body and `overflow-wrap: break-word` on repo names/descriptions to prevent horizontal scroll. Skeleton loading states updated to match mobile card dimensions.
 
 ### Performance
 

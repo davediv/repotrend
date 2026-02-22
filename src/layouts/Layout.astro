@@ -178,10 +178,12 @@ const {
 		font-family:
 			-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif,
 			"Apple Color Emoji", "Segoe UI Emoji";
+		font-size: 16px;
 		background-color: var(--color-bg);
 		color: var(--color-text);
 		line-height: 1.5;
 		color-scheme: light;
+		overflow-x: hidden;
 	}
 
 	html.dark {
@@ -221,6 +223,7 @@ const {
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
+		overflow-x: hidden;
 	}
 
 	.sr-only {
@@ -374,16 +377,42 @@ const {
 		color: var(--color-text);
 	}
 
-	/* Responsive */
+	/* Responsive — Mobile (≤ 640px) */
 	@media (max-width: 640px) {
+		.header-inner {
+			height: 56px;
+			padding: 0 0.75rem;
+		}
+
+		.logo-name {
+			font-size: 1.125rem;
+		}
+
 		.tagline {
 			display: none;
+		}
+
+		#theme-toggle {
+			width: 44px;
+			height: 44px;
+		}
+
+		.main-inner {
+			padding: 1rem 0.75rem;
 		}
 
 		.footer-inner {
 			flex-direction: column;
 			gap: 0.5rem;
 			text-align: center;
+			padding: 1.25rem 0.75rem;
+		}
+	}
+
+	/* Responsive — Tablet (641px – 1024px) */
+	@media (min-width: 641px) and (max-width: 1024px) {
+		.main-inner {
+			padding: 1.5rem;
 		}
 	}
 </style>

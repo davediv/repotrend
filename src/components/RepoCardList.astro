@@ -314,8 +314,25 @@ const { date, viewMode = "daily" } = Astro.props;
 
 	@media (max-width: 640px) {
 		.skeleton-card {
-			padding: 0.75rem 1rem;
-			gap: 0.75rem;
+			padding: 0.75rem 0.75rem;
+			gap: 0.625rem;
+		}
+
+		.skeleton-rank {
+			width: 1.75rem;
+			height: 1.75rem;
+		}
+
+		.skeleton-title {
+			width: 60%;
+		}
+
+		.skeleton-desc {
+			width: 90%;
+		}
+
+		.retry-btn {
+			width: 100%;
 		}
 	}
 </style>
