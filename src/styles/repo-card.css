@@ -1,4 +1,4 @@
-/* Shared repo card styles consumed by both RepoCard.astro (SSR) and RepoCardList.astro (client). */
+/* Shared repo card styles for server-rendered RepoCard.astro components. */
 
 .repo-card {
 	display: flex;
@@ -11,6 +11,9 @@
 	transition:
 		border-color 0.15s,
 		box-shadow 0.15s;
+	/* Skip layout/paint for off-screen cards to speed up initial render */
+	content-visibility: auto;
+	contain-intrinsic-size: auto 5.5rem;
 }
 
 .repo-card:hover {

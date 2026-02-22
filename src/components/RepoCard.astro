@@ -1,6 +1,5 @@
 ---
-// Server-side repo card for SSR/SSG use (e.g., static page generation per UI-P1-011).
-// Client-rendered equivalent lives in RepoCardList.astro — keep markup in sync.
+// Server-side repo card used for SSR rendering.
 // Shared styles live in src/styles/repo-card.css (imported globally via Layout.astro).
 import { formatNumber, sanitizeHexColor } from "../lib/format";
 
@@ -14,6 +13,7 @@ interface Props {
 	totalStars: number;
 	forks: number;
 	starsToday: number;
+	viewMode?: "daily" | "weekly";
 }
 
 const {
@@ -26,11 +26,13 @@ const {
 	totalStars,
 	forks,
 	starsToday,
+	viewMode = "daily",
 } = Astro.props;
 
 const repoUrl = `https://github.com/${repoOwner}/${repoName}`;
 const safeColor = sanitizeHexColor(languageColor);
 const headingId = `repo-heading-${rank}`;
+const starsLabel = viewMode === "weekly" ? "this week" : "today";
 ---
 
 <article class="repo-card" aria-labelledby={headingId}>
@@ -80,10 +82,8 @@ const headingId = `repo-heading-${rank}`;
 					<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
 				</svg>
 				<span class="sr-only">Stars gained </span>
-				{formatNumber(starsToday)} today
+				{formatNumber(starsToday)} {starsLabel}
 			</span>
 		</div>
 	</div>
 </article>
-
-<!-- Styles loaded globally from src/styles/repo-card.css via Layout.astro -->

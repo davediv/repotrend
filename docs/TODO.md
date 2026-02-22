@@ -368,7 +368,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Performance
 
-- [ ] **UI-P1-011**: Optimize page load performance to meet Core Web Vitals targets
+- [x] **UI-P1-011**: Optimize page load performance to meet Core Web Vitals targets
   - **Success Criteria**:
     - LCP < 2 seconds on simulated 3G connection
     - CLS < 0.1 on all pages
@@ -384,6 +384,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Check Network tab for total JS bundle size < 50KB gzipped
     - Emulate Slow 3G and reload page to verify acceptable load time
   - **Dependencies**: UI-P1-008, UI-P1-009
+  - **Completed**: 2026-02-22
+  - **Implementation**: Migrated repo card rendering from client-side JS fetch to full SSR. Created shared `src/lib/trending.ts` with `TrendingRepo` type and `getTrendingRepos()` query. Rewrote `RepoCardList.astro` to render `RepoCard.astro` components server-side (zero client JS for cards), eliminating the skeleton→content CLS transition and reducing LCP by removing the extra API round-trip. Added `content-visibility: auto` to off-screen cards in `repo-card.css` to skip layout/paint for below-fold content. Semantic HTML improved: `<ol>` list with `<li>` items instead of `role="feed"`. All pages (index, daily, weekly) now query D1 during SSR and pass repos as props. Total client JS remains minimal (~400 bytes for theme toggle + date picker).
 
 ---
 

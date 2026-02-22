@@ -5,11 +5,13 @@ import Toolbar from "../components/Toolbar.astro";
 import ViewToggle from "../components/ViewToggle.astro";
 import RepoCardList from "../components/RepoCardList.astro";
 import { todayUTC } from "../lib/dates";
+import { getTrendingRepos, type TrendingRepo } from "../lib/trending";
 
 export const prerender = false;
 
 const today = todayUTC();
 let effectiveDate = today;
+let repos: TrendingRepo[] = [];
 
 try {
 	const db = Astro.locals.runtime.env.DB;
@@ -26,17 +28,18 @@ try {
 	if (results.length > 0) {
 		effectiveDate = results[0].trending_date;
 	}
+
+	repos = await getTrendingRepos(db, effectiveDate);
 } catch (error) {
 	const message = error instanceof Error ? error.message : String(error);
 	console.error(
 		JSON.stringify({
 			level: "error",
-			event: "homepage_date_fallback_error",
+			event: "homepage_ssr_error",
 			timestamp: new Date().toISOString(),
 			error: message,
 		}),
 	);
-	// Fall through with today's date and let the client handle empty state
 }
 ---
 
@@ -48,5 +51,5 @@ try {
 		<DatePicker selectedDate={effectiveDate} viewMode="daily" />
 		<ViewToggle activeView="daily" currentDate={effectiveDate} />
 	</Toolbar>
-	<RepoCardList date={effectiveDate} />
+	<RepoCardList repos={repos} />
 </Layout>
