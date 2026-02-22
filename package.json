@@ -1,0 +1,24 @@
+{
+	"name": "repotrend",
+	"type": "module",
+	"version": "0.0.1",
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"preview": "astro build && wrangler dev",
+		"astro": "astro",
+		"deploy": "astro build && wrangler deploy",
+		"cf-typegen": "wrangler types",
+		"db:seed": "wrangler d1 execute repotrend-db --local --file=./scripts/seed.sql"
+	},
+	"dependencies": {
+		"@astrojs/check": "^0.9.6",
+		"@astrojs/cloudflare": "^12.6.12",
+		"astro": "^5.17.1",
+		"typescript": "^5.9.3"
+	},
+	"devDependencies": {
+		"@types/node": "^25.3.0",
+		"wrangler": "^4.67.0"
+	}
+}
