@@ -2,6 +2,8 @@
 // Server-side repo card used for SSR rendering.
 // Shared styles live in src/styles/repo-card.css (imported globally via Layout.astro).
 import { formatNumber, sanitizeHexColor } from "../lib/format";
+import Sparkline from "./Sparkline.astro";
+import type { StarHistoryPoint } from "../lib/trending";
 
 interface Props {
 	rank: number;
@@ -20,6 +22,8 @@ interface Props {
 	streak?: number;
 	/** Whether this is the repo's first appearance in the archive. */
 	isNewEntry?: boolean;
+	/** Historical star-gain data for sparkline chart (requires 2+ points). */
+	starHistory?: StarHistoryPoint[];
 }
 
 const {
@@ -36,6 +40,7 @@ const {
 	appearances,
 	streak,
 	isNewEntry,
+	starHistory,
 } = Astro.props;
 
 const repoUrl = `https://github.com/${repoOwner}/${repoName}`;
@@ -131,6 +136,12 @@ const streakLabel = showStreak ? (streak === 1 ? "1 day" : `${streak} days`) : "
 				<span class="sr-only">Stars gained </span>
 				{formatNumber(starsToday)} {starsLabel}
 			</span>
+
+			{starHistory && starHistory.length >= 2 && (
+				<span class="meta-item sparkline-container">
+					<Sparkline points={starHistory} />
+				</span>
+			)}
 		</div>
 	</div>
 </article>

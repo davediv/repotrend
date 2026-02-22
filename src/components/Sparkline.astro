@@ -1,0 +1,81 @@
+---
+import type { StarHistoryPoint } from "../lib/trending";
+
+interface Props {
+	/** Chronologically-sorted star history data points (oldest first, minimum 2). */
+	points: StarHistoryPoint[];
+}
+
+const { points } = Astro.props;
+
+const WIDTH = 100;
+const HEIGHT = 24;
+const PAD = 2;
+
+const plotW = WIDTH - PAD * 2;
+const plotH = HEIGHT - PAD * 2;
+
+let minY = Infinity;
+let maxY = -Infinity;
+for (const p of points) {
+	if (p.stars_today < minY) minY = p.stars_today;
+	if (p.stars_today > maxY) maxY = p.stars_today;
+}
+const isFlat = maxY === minY;
+const rangeY = isFlat ? 1 : maxY - minY;
+
+function x(i: number): number {
+	const divisor = points.length - 1;
+	return divisor > 0 ? PAD + (i / divisor) * plotW : PAD + plotW / 2;
+}
+
+function y(val: number): number {
+	if (isFlat) return PAD + plotH / 2;
+	return PAD + plotH - ((val - minY) / rangeY) * plotH;
+}
+
+const hitRadius = Math.max(2, Math.min(4, plotW / points.length / 2));
+
+const polylinePoints = points
+	.map((p, i) => `${x(i).toFixed(1)},${y(p.stars_today).toFixed(1)}`)
+	.join(" ");
+
+function formatDate(dateStr: string): string {
+	const d = new Date(`${dateStr}T00:00:00Z`);
+	return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+const showSparkline = points.length >= 2;
+---
+
+{showSparkline && (
+	<svg
+		class="sparkline"
+		width={WIDTH}
+		height={HEIGHT}
+		viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+		role="img"
+		aria-label={`Star history sparkline: ${points.length} data points, range ${minY.toLocaleString("en-US")}–${maxY.toLocaleString("en-US")} stars`}
+	>
+		<polyline
+			points={polylinePoints}
+			fill="none"
+			stroke="var(--color-sparkline)"
+			stroke-width="1.5"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			vector-effect="non-scaling-stroke"
+		/>
+		{points.map((p, i) => (
+			<circle
+				cx={x(i).toFixed(1)}
+				cy={y(p.stars_today).toFixed(1)}
+				r={hitRadius}
+				fill="transparent"
+				stroke="none"
+			>
+				<title>{formatDate(p.date)}: ★ {p.stars_today.toLocaleString("en-US")}</title>
+			</circle>
+		))}
+	</svg>
+)}
