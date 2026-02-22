@@ -103,7 +103,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/scraper/persistence.ts` — `persistRepos()` using D1 batch API with `INSERT OR REPLACE` for deduplication, typed error handling
 
-- [ ] **FEAT-P0-004**: Implement scheduled cron handler that orchestrates scrape pipeline
+- [x] **FEAT-P0-004**: Implement scheduled cron handler that orchestrates scrape pipeline
   - **Success Criteria**:
     - Exports a `scheduled` event handler in the Worker entry point
     - Handler calls fetch → parse → persist in sequence
@@ -112,6 +112,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Does not crash the Worker on transient errors; catches and logs
     - Can be triggered locally with `wrangler dev --test-scheduled`
   - **Dependencies**: FEAT-P0-001, FEAT-P0-002, FEAT-P0-003, INFRA-P0-003
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/scraper/pipeline.ts` — `runScrapePipeline()` orchestrates fetch→parse→persist with structured JSON logging; `src/pages/api/cron.ts` — API route exposing the pipeline; `scripts/inject-scheduled.mjs` — post-build script injecting `scheduled` handler into compiled Worker via self-fetch to `/api/cron`
 
 - [ ] **FEAT-P0-005**: Add scrape health logging and failure tracking
   - **Success Criteria**:
