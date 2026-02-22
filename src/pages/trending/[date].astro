@@ -7,7 +7,7 @@ import RepoCardList from "../../components/RepoCardList.astro";
 import ErrorFallback from "../../components/ErrorFallback.astro";
 import { formatDateDisplay, isValidBrowseDate } from "../../lib/dates";
 import { logError } from "../../lib/log";
-import { getTrendingRepos, type TrendingRepo } from "../../lib/trending";
+import { getTrendingReposWithStreaks, type TrendingRepo } from "../../lib/trending";
 
 export const prerender = false;
 
@@ -23,7 +23,7 @@ let repos: TrendingRepo[] = [];
 let hasError = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
-	repos = await getTrendingRepos(db, date);
+	repos = await getTrendingReposWithStreaks(db, date);
 } catch (error) {
 	hasError = true;
 	logError("trending_date_ssr_error", { date })(error);

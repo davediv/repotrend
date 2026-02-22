@@ -489,7 +489,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Trending Streak Indicator
 
-- [ ] **API-P3-001**: Implement API logic to calculate trending streaks
+- [x] **API-P3-001**: Implement API logic to calculate trending streaks
   - **Success Criteria**:
     - For a given date's trending repos, calculate the consecutive-day streak for each repo
     - Streak counts backward from the queried date: if a repo appeared on Feb 15, 14, 13 but not 12, streak = 3
@@ -497,6 +497,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Streak data is included in the `/api/trending/[date]` response as a `streak` field on each repo
     - Repos with streak = 1 (single day) return `streak: 1`
   - **Dependencies**: API-P1-001, DB-P0-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/trending.ts` — Added `calculateStreaks()` using INNER JOIN to fetch historical appearance dates within 60-day lookback window, then `consecutiveStreak()` walks backward counting consecutive days. `getTrendingReposWithStreaks()` wrapper encapsulates fetch+streak with non-fatal error handling. `streak` field added to `TrendingRepo` interface. Integrated into `/api/trending/[date]` (with KV caching), homepage SSR, and daily view SSR.
 
 - [ ] **UI-P3-001**: Display trending streak badge on repository cards
   - **Success Criteria**:

@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { isValidDate, todayUTC } from "../../../lib/dates";
-import type { TrendingRepo } from "../../../lib/trending";
+import { calculateStreaks, type TrendingRepo } from "../../../lib/trending";
 
 export const prerender = false;
 
@@ -78,7 +78,24 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		});
 	}
 
-	// 3. Populate KV cache (skip empty results to allow future backfills)
+	// 3. Calculate trending streaks for each repo
+	try {
+		await calculateStreaks(db, date, results);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.error(
+			JSON.stringify({
+				level: "error",
+				event: "streak_calc_error",
+				timestamp: new Date().toISOString(),
+				date,
+				error: message,
+			}),
+		);
+		// Non-fatal: results are still valid without streaks
+	}
+
+	// 4. Populate KV cache (skip empty results to allow future backfills)
 	const json = JSON.stringify(results);
 	if (results.length > 0) {
 		try {

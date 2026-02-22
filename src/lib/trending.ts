@@ -8,6 +8,8 @@ export interface TrendingRepo {
 	total_stars: number;
 	forks: number;
 	stars_today: number;
+	/** Consecutive-day trending streak ending on the queried date (1 = single day). */
+	streak?: number;
 }
 
 /** Shape of a weekly-aggregated trending repo. */
@@ -109,4 +111,115 @@ export async function getWeeklyTrendingRepos(
 	const repos = results.map(({ days_in_week: _, ...repo }) => repo);
 
 	return { repos, daysWithData };
+}
+
+/** Max number of days to look back when calculating streaks. */
+const STREAK_LOOKBACK_DAYS = 60;
+
+/**
+ * Fetch trending repos for a date with streak data included.
+ * Wraps `getTrendingRepos` + `calculateStreaks` into a single call.
+ * Streak errors are non-fatal — repos are returned without streaks if the
+ * streak query fails.
+ */
+export async function getTrendingReposWithStreaks(
+	db: D1Database,
+	date: string,
+): Promise<TrendingRepo[]> {
+	const repos = await getTrendingRepos(db, date);
+	try {
+		await calculateStreaks(db, date, repos);
+	} catch {
+		// Non-fatal: repos are still valid without streaks
+	}
+	return repos;
+}
+
+/**
+ * Calculate consecutive-day trending streaks for the given repos on a specific date.
+ * Mutates each repo in-place by setting the `streak` property.
+ *
+ * A streak counts backward from `date`: if a repo appeared on Feb 15, 14, 13 but
+ * not Feb 12, its streak on Feb 15 is 3. A single-day appearance yields streak = 1.
+ *
+ * Uses a single indexed query over the (`repo_owner`, `repo_name`) and
+ * `trending_date` indexes for efficient lookups.
+ */
+export async function calculateStreaks(
+	db: D1Database,
+	date: string,
+	repos: TrendingRepo[],
+): Promise<void> {
+	if (repos.length === 0) return;
+
+	const lookbackDate = daysAgo(date, STREAK_LOOKBACK_DAYS);
+
+	// Fetch appearance dates for all repos trending on `date`, looking back up to
+	// STREAK_LOOKBACK_DAYS. The INNER JOIN limits history rows to only the repos
+	// present on the target date.
+	const { results } = await db
+		.prepare(
+			`SELECT h.repo_owner, h.repo_name, h.trending_date
+			   FROM trending_repos h
+			  INNER JOIN trending_repos t
+			     ON h.repo_owner = t.repo_owner AND h.repo_name = t.repo_name
+			  WHERE t.trending_date = ?
+			    AND h.trending_date <= ?
+			    AND h.trending_date >= ?
+			  ORDER BY h.repo_owner, h.repo_name, h.trending_date DESC`,
+		)
+		.bind(date, date, lookbackDate)
+		.all<{ repo_owner: string; repo_name: string; trending_date: string }>();
+
+	// Group appearance dates by repo key
+	const datesByRepo = new Map<string, string[]>();
+	for (const row of results) {
+		const key = `${row.repo_owner}/${row.repo_name}`;
+		let dates = datesByRepo.get(key);
+		if (!dates) {
+			dates = [];
+			datesByRepo.set(key, dates);
+		}
+		dates.push(row.trending_date);
+	}
+
+	// Compute streak for each repo (minimum 1 since the repo is trending on the target date)
+	for (const repo of repos) {
+		const key = `${repo.repo_owner}/${repo.repo_name}`;
+		const dates = datesByRepo.get(key);
+		repo.streak = dates ? Math.max(1, consecutiveStreak(dates, date)) : 1;
+	}
+}
+
+/**
+ * Count consecutive days backward from `targetDate` in a descending-sorted date array.
+ * Expects `sortedDatesDesc` to contain YYYY-MM-DD strings in descending order,
+ * starting from `targetDate`.
+ */
+function consecutiveStreak(sortedDatesDesc: string[], targetDate: string): number {
+	let streak = 0;
+	let expected = targetDate;
+	for (const date of sortedDatesDesc) {
+		if (date === expected) {
+			streak++;
+			expected = previousDay(expected);
+		} else if (date < expected) {
+			break;
+		}
+	}
+	return streak;
+}
+
+/** Return the YYYY-MM-DD string for the day before `dateStr`. */
+function previousDay(dateStr: string): string {
+	const d = new Date(dateStr + "T00:00:00Z");
+	d.setUTCDate(d.getUTCDate() - 1);
+	return d.toISOString().slice(0, 10);
+}
+
+/** Return the YYYY-MM-DD string for `n` days before `dateStr`. */
+function daysAgo(dateStr: string, n: number): string {
+	const d = new Date(dateStr + "T00:00:00Z");
+	d.setUTCDate(d.getUTCDate() - n);
+	return d.toISOString().slice(0, 10);
 }
