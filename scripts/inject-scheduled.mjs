@@ -31,7 +31,7 @@ const _scheduledWorker = {
   fetch: __astrojsSsrVirtualEntry.fetch,
   async scheduled(controller, env, ctx) {
     const start = Date.now();
-    console.log(JSON.stringify({ level: "info", event: "cron_triggered", scheduledTime: controller.scheduledTime }));
+    console.log(JSON.stringify({ level: "info", event: "cron_triggered", timestamp: new Date().toISOString(), scheduledTime: controller.scheduledTime }));
     try {
       const response = await _scheduledWorker.fetch(
         new Request("http://trigger.internal/api/cron"),
@@ -40,13 +40,13 @@ const _scheduledWorker = {
       );
       if (!response.ok) {
         const text = await response.text();
-        console.error(JSON.stringify({ level: "error", event: "cron_handler_failed", status: response.status, body: text, durationMs: Date.now() - start }));
+        console.error(JSON.stringify({ level: "error", event: "cron_handler_failed", timestamp: new Date().toISOString(), status: response.status, body: text, durationMs: Date.now() - start }));
       } else {
         const result = await response.json();
-        console.log(JSON.stringify({ level: "info", event: "cron_handler_done", ...result, durationMs: Date.now() - start }));
+        console.log(JSON.stringify({ level: "info", event: "cron_handler_done", timestamp: new Date().toISOString(), ...result, durationMs: Date.now() - start }));
       }
     } catch (error) {
-      console.error(JSON.stringify({ level: "error", event: "cron_handler_error", error: error instanceof Error ? error.message : String(error), durationMs: Date.now() - start }));
+      console.error(JSON.stringify({ level: "error", event: "cron_handler_error", timestamp: new Date().toISOString(), error: error instanceof Error ? error.message : String(error), durationMs: Date.now() - start }));
     }
   },
 };
