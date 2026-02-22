@@ -8,6 +8,11 @@ export function isValidDate(value: string): boolean {
 	return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day;
 }
 
+/** Validate that a date string is a valid YYYY-MM-DD date not in the future. */
+export function isValidBrowseDate(value: string): boolean {
+	return isValidDate(value) && value <= todayUTC();
+}
+
 /** Return today's date as YYYY-MM-DD in UTC. */
 export function todayUTC(): string {
 	const now = new Date();

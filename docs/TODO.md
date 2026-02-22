@@ -325,7 +325,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/pages/index.astro` — SSR homepage with D1 query to find most recent available date (fallback from today), passes `effectiveDate` to DatePicker/ViewToggle/RepoCardList components. Uses Layout default title "RepoTrend — GitHub Trending Archive" and SEO meta description. Structured JSON error logging on D1 failure with graceful fallback to today's date.
 
-- [ ] **UI-P1-009**: Implement date-specific route (`/trending/[date]`) for historical browsing
+- [x] **UI-P1-009**: Implement date-specific route (`/trending/[date]`) for historical browsing
   - **Success Criteria**:
     - Dynamic route `/trending/YYYY-MM-DD` renders trending data for the specified date
     - Date picker auto-selects the date from the URL
@@ -341,6 +341,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Click next-day arrow and verify URL changes to `/trending/2026-02-16`
     - Copy URL, open in new tab, verify same view loads
   - **Dependencies**: UI-P1-008, API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/trending/[date].astro` — SSR route with `isValidBrowseDate` validation (rewrites to 404 for invalid dates), `formatDateDisplay` for date-aware page title, passes date to DatePicker/ViewToggle/RepoCardList. `src/pages/404.astro` — Custom 404 page with proper status code, accessible design, and homepage navigation link.
 
 ### Responsive Design
 
