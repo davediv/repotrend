@@ -1,0 +1,31 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import DatePicker from "../../../components/DatePicker.astro";
+import Toolbar from "../../../components/Toolbar.astro";
+import ViewToggle from "../../../components/ViewToggle.astro";
+import { formatWeekRange, getMondayOfWeek, isValidDate } from "../../../lib/dates";
+
+export const prerender = false;
+
+const { date } = Astro.params;
+
+if (!date || !isValidDate(date)) {
+	return new Response(null, { status: 404, statusText: "Not Found" });
+}
+
+const monday = getMondayOfWeek(date);
+
+// Redirect to the canonical Monday URL if the date isn't already a Monday
+if (date !== monday) {
+	return Astro.redirect(`/trending/week/${monday}`, 302);
+}
+
+const weekLabel = formatWeekRange(date);
+---
+
+<Layout title={`Trending ${weekLabel} — RepoTrend`}>
+	<Toolbar>
+		<DatePicker selectedDate={date} viewMode="weekly" />
+		<ViewToggle activeView="weekly" currentDate={date} />
+	</Toolbar>
+</Layout>

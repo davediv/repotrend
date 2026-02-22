@@ -207,11 +207,11 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/components/DatePicker.astro` — Astro component with client-side JS controller. Fetches `/api/dates` for archive range, prev/next arrows navigate through available dates (skipping gaps), native `<input type="date">` for calendar picker via `showPicker()`, keyboard accessible (ArrowLeft/ArrowRight + Enter). Shared date utilities extracted to `src/lib/dates.ts`. Minimal `src/pages/trending/[date].astro` route shell for deep-linkable navigation.
 
-- [ ] **UI-P1-003**: Implement daily/weekly view toggle
+- [x] **UI-P1-003**: Implement daily/weekly view toggle
   - **Success Criteria**:
     - Toggle switch or tab UI allows switching between "Daily" and "Weekly" views
     - Active view is visually highlighted
-    - Toggling updates the URL path (e.g., `/trending/YYYY-MM-DD` vs `/trending/week/YYYY-WXX`)
+    - Toggling updates the URL path (e.g., `/trending/YYYY-MM-DD` vs `/trending/week/YYYY-MM-DD`)
     - Selected view persists when navigating dates
     - Toggle is keyboard accessible
   - **Browser Validation** (chrome-devtools MCP):
@@ -221,6 +221,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Click "Daily" toggle and verify it switches back
     - Check that toggle is focusable and activatable via keyboard
   - **Dependencies**: UI-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/components/ViewToggle.astro` — Segmented nav control with Daily/Weekly links, `aria-current` for active state, proper `<nav>` semantics. `src/components/Toolbar.astro` — Shared toolbar layout wrapper. Enhanced `src/components/DatePicker.astro` with `viewMode` prop for weekly navigation (7-day jumps, Monday normalization). `src/pages/trending/week/[date].astro` — Weekly route with Monday redirect normalization. Added `getMondayOfWeek`, `getSundayOfWeek`, `formatWeekRange` to `src/lib/dates.ts`.
 
 ### Repository Card
 
