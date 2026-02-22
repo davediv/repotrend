@@ -92,7 +92,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/scraper/parser.ts` — `parseTrendingPage()` using `node-html-parser`, extracts all 25 repos via `article.Box-row` selector with `parseFormattedNumber()` utility for comma/k-abbreviated numbers
 
-- [ ] **FEAT-P0-003**: Implement D1 persistence layer for scraped data
+- [x] **FEAT-P0-003**: Implement D1 persistence layer for scraped data
   - **Success Criteria**:
     - Function accepts an array of parsed repos and a date, and inserts/upserts into `trending_repos`
     - Uses `INSERT OR REPLACE` (or equivalent) keyed on (`repo_owner`, `repo_name`, `trending_date`) for deduplication
@@ -100,6 +100,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Returns count of rows inserted/updated
     - Handles D1 errors with descriptive logging
   - **Dependencies**: DB-P0-001, FEAT-P0-002
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/scraper/persistence.ts` — `persistRepos()` using D1 batch API with `INSERT OR REPLACE` for deduplication, typed error handling
 
 - [ ] **FEAT-P0-004**: Implement scheduled cron handler that orchestrates scrape pipeline
   - **Success Criteria**:
