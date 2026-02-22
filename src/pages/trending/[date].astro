@@ -1,6 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import DatePicker from "../../components/DatePicker.astro";
+import Toolbar from "../../components/Toolbar.astro";
+import ViewToggle from "../../components/ViewToggle.astro";
 import { isValidDate } from "../../lib/dates";
 
 export const prerender = false;
@@ -13,5 +15,8 @@ if (!date || !isValidDate(date)) {
 ---
 
 <Layout title={`Trending ${date} — RepoTrend`}>
-	<DatePicker selectedDate={date} />
+	<Toolbar>
+		<DatePicker selectedDate={date} viewMode="daily" />
+		<ViewToggle activeView="daily" currentDate={date} />
+	</Toolbar>
 </Layout>

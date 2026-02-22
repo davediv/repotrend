@@ -1,8 +1,16 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import DatePicker from "../components/DatePicker.astro";
+import Toolbar from "../components/Toolbar.astro";
+import ViewToggle from "../components/ViewToggle.astro";
+import { todayUTC } from "../lib/dates";
+
+const today = todayUTC();
 ---
 
 <Layout>
-	<DatePicker />
+	<Toolbar>
+		<DatePicker />
+		<ViewToggle activeView="daily" currentDate={today} />
+	</Toolbar>
 </Layout>
