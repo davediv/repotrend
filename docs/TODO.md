@@ -518,13 +518,15 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### New Entry Badge
 
-- [ ] **API-P3-002**: Implement API logic to detect first-time trending repos
+- [x] **API-P3-002**: Implement API logic to detect first-time trending repos
   - **Success Criteria**:
     - For a given date's trending repos, flag repos that have no prior appearance in the archive
     - Check is a simple query: `SELECT COUNT(*) FROM trending_repos WHERE repo_owner = ? AND repo_name = ? AND trending_date < ?`
     - Result is included in the API response as `is_new_entry: true/false`
     - Performance is acceptable (batch query or efficient per-repo check)
   - **Dependencies**: API-P1-001, DB-P0-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/trending.ts` — Added `detectNewEntries()` using NOT EXISTS subquery for efficient short-circuit evaluation on the `(repo_owner, repo_name)` index. `is_new_entry` boolean added to `TrendingRepo` interface. Integrated into `getTrendingReposWithStreaks()` wrapper (SSR path) and `/api/trending/[date]` endpoint (API path) with non-fatal error handling. Repos with no prior archive appearance are flagged `is_new_entry: true`.
 
 - [ ] **UI-P3-002**: Display "New" badge on first-time trending repos
   - **Success Criteria**:
