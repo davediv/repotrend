@@ -393,7 +393,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### API Endpoints
 
-- [ ] **API-P2-001**: Implement API endpoint to fetch weekly aggregated trending data
+- [x] **API-P2-001**: Implement API endpoint to fetch weekly aggregated trending data
   - **Success Criteria**:
     - `GET /api/trending/week/[date]` accepts a date and returns the Monday–Sunday week containing that date
     - Response includes repos ranked by frequency of appearance (days trending), then by total `stars_today` sum
@@ -402,6 +402,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Returns 400 for invalid date formats
     - Response includes `week_start` and `week_end` date strings
   - **Dependencies**: DB-P0-001, API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/api/trending/week/[date].ts` — API route accepting any date, normalizing to Monday–Sunday week range via `getMondayOfWeek`/`getSundayOfWeek`. Uses `getWeeklyTrendingRepos()` from `src/lib/trending.ts` with a single SQL query using window functions (`COUNT`, `SUM`, `MAX`, `ROW_NUMBER`, `COUNT(DISTINCT)`) to aggregate repos by appearance frequency and total stars gained, picking latest metadata per repo. KV caching with `trending:week:{monday}` key format (1h TTL for current week, indefinite for past). Returns `{ week_start, week_end, partial, repos }` with partial-week detection.
 
 ### Weekly View UI
 
