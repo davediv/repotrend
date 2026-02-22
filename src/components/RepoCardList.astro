@@ -52,6 +52,7 @@ const weekDatetime = weekStart ? `${weekStart}/${getSundayOfWeek(weekStart)}` : 
 					starsToday={isWeekly ? (repo as WeeklyTrendingRepo).total_stars_gained : (repo as TrendingRepo).stars_today}
 					viewMode={viewMode}
 					appearances={isWeekly ? (repo as WeeklyTrendingRepo).appearances : undefined}
+					streak={!isWeekly ? (repo as TrendingRepo).streak : undefined}
 				/>
 			</li>
 		))}

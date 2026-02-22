@@ -500,7 +500,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/trending.ts` — Added `calculateStreaks()` using INNER JOIN to fetch historical appearance dates within 60-day lookback window, then `consecutiveStreak()` walks backward counting consecutive days. `getTrendingReposWithStreaks()` wrapper encapsulates fetch+streak with non-fatal error handling. `streak` field added to `TrendingRepo` interface. Integrated into `/api/trending/[date]` (with KV caching), homepage SSR, and daily view SSR.
 
-- [ ] **UI-P3-001**: Display trending streak badge on repository cards
+- [x] **UI-P3-001**: Display trending streak badge on repository cards
   - **Success Criteria**:
     - Cards show a streak badge (e.g., ":fire: 5 days") for repos with streak ≥ 2
     - Badge is visually distinct (flame icon + count)
@@ -513,6 +513,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Hover over streak badge and verify tooltip text
     - Verify badge is readable in both light and dark modes
   - **Dependencies**: API-P3-001, UI-P1-004
+  - **Completed**: 2026-02-22
+  - **Implementation**: Added `streak` prop to `src/components/RepoCard.astro` with flame SVG icon badge in title row for streak ≥ 2, parameterized tooltip with streak count, screen-reader accessible text. `src/components/RepoCardList.astro` passes streak from `TrendingRepo` to `RepoCard` (daily view only). Added `.streak-badge` styles to `src/styles/repo-card.css` with `margin-inline-start: auto` layout pattern. Added `--color-streak`, `--color-streak-bg`, `--color-streak-border` CSS tokens for light and dark themes in `src/layouts/Layout.astro`.
 
 ### New Entry Badge
 
