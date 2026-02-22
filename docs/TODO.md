@@ -226,7 +226,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Repository Card
 
-- [ ] **UI-P1-004**: Implement repository card component
+- [x] **UI-P1-004**: Implement repository card component
   - **Success Criteria**:
     - Card displays: repo full name (`owner/name`) linked to GitHub, description, programming language with colored dot, total stars (formatted with commas), stars gained today, fork count
     - Repo name is an anchor tag linking to `https://github.com/{owner}/{name}`
@@ -245,6 +245,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Verify a card with no language renders without a language badge
     - Check Console for zero errors
   - **Dependencies**: API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/components/RepoCard.astro` — Astro component with rank badge, GitHub-linked repo name, conditional description/language, star/fork/stars-today metadata with SVG icons. `src/lib/format.ts` — shared `formatNumber()` and `sanitizeHexColor()` utilities. Global `.sr-only` class added to Layout.astro for accessibility.
 
 - [ ] **UI-P1-005**: Implement repo card list with loading and empty states
   - **Success Criteria**:
