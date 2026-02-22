@@ -8,8 +8,14 @@ import RepoCardList from "../../components/RepoCardList.astro";
 import ErrorFallback from "../../components/ErrorFallback.astro";
 import { formatDateDisplay, isValidBrowseDate } from "../../lib/dates";
 import { logError } from "../../lib/log";
-import { getTrendingReposWithStreaks, type TrendingRepo } from "../../lib/trending";
+import {
+	getLanguageDistribution,
+	getTrendingReposWithStreaks,
+	type LanguageDistribution,
+	type TrendingRepo,
+} from "../../lib/trending";
 import { parseSortParam, sortDailyRepos } from "../../lib/sort";
+import LanguageChart from "../../components/LanguageChart.astro";
 
 export const prerender = false;
 
@@ -23,10 +29,16 @@ const displayDate = formatDateDisplay(date);
 const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
 let repos: TrendingRepo[] = [];
+let languages: LanguageDistribution[] = [];
 let hasError = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
 	repos = sortDailyRepos(await getTrendingReposWithStreaks(db, date), sort);
+	try {
+		languages = await getLanguageDistribution(db, date);
+	} catch {
+		// Non-fatal: page renders without language chart
+	}
 } catch (error) {
 	hasError = true;
 	logError("trending_date_ssr_error", { date })(error);
@@ -42,5 +54,6 @@ try {
 		<ViewToggle activeView="daily" currentDate={date} />
 		<SortDropdown activeSort={sort} />
 	</Toolbar>
+	<LanguageChart languages={languages} />
 	{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} />}
 </Layout>

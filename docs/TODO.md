@@ -650,7 +650,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/trending.ts` — Added `LanguageDistribution` interface, `getLanguageDistribution()` and `getWeeklyLanguageDistribution()` query functions with parameterized SQL (GROUP BY language name, MAX for color), `applyPercentages()` using largest-remainder method in integer tenths for exact 100% sum. `src/pages/api/languages/[date].ts` — Daily endpoint with KV caching (`languages:{date}` key), structured cache hit/miss logging, 1h TTL for today. `src/pages/api/languages/week/[date].ts` — Weekly endpoint with Monday normalization, KV caching (`languages:week:{monday}` key), 1h TTL for current week.
 
-- [ ] **UI-P4-001**: Implement language breakdown donut/bar chart
+- [x] **UI-P4-001**: Implement language breakdown donut/bar chart
   - **Success Criteria**:
     - Chart renders below the date picker area showing language distribution
     - Uses lightweight SVG-based chart (no heavy library like Chart.js)
@@ -665,6 +665,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Verify chart colors match GitHub language colors
     - Switch to weekly view and verify chart updates
   - **Dependencies**: API-P4-001, UI-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/components/LanguageChart.astro` — Pure SSR SVG donut chart using `stroke-dasharray`/`stroke-dashoffset` technique on `<circle>` elements, with center repo count overlay. Groups languages beyond top 8 into "Other" bucket. Legend with colored dots, language names, and percentages. Native `<title>` tooltips on each segment showing language, repo count, and percentage. `src/styles/language-chart.css` — Shared styles with responsive mobile layout (vertical stacking at 640px). Integrated into all 3 pages (index, daily, weekly) with SSR D1 queries via `getLanguageDistribution`/`getWeeklyLanguageDistribution`. Non-fatal error handling for language data fetch failures.
 
 ### Calendar Heatmap Navigation
 

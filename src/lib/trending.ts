@@ -7,7 +7,7 @@ export interface LanguageDistribution {
 }
 
 /** Default color for repos with no language color. */
-const UNKNOWN_LANGUAGE_COLOR = "#8b949e";
+export const UNKNOWN_LANGUAGE_COLOR = "#8b949e";
 
 /**
  * Query language distribution for a single date.
