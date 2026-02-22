@@ -593,7 +593,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/trending.ts` — Added `StarHistoryPoint` interface and `fetchStarHistory()` using INNER JOIN with 365-day lookback window, groups by repo key, sets `star_history` only for repos with 2+ data points (oldest-first). Integrated into `getTrendingReposWithStreaks()` wrapper (SSR path) and `/api/trending/[date]` endpoint (API path) with non-fatal error handling. Also refactored API endpoint error logging to use shared `logError()` utility from `src/lib/log.ts`.
 
-- [ ] **UI-P3-004**: Implement sparkline chart on repository cards
+- [x] **UI-P3-004**: Implement sparkline chart on repository cards
   - **Success Criteria**:
     - Small inline SVG sparkline chart rendered on cards for repos with 2+ data points
     - Chart shows daily `stars_today` values over time
@@ -609,6 +609,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Toggle dark mode and verify sparkline colors adapt
     - Verify sparklines do not cause layout shift
   - **Dependencies**: API-P3-004, UI-P1-004
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/components/Sparkline.astro` — Lightweight SVG polyline sparkline (100×24px) with adaptive hit-target circles for native browser tooltips (date + star count), defensive guards for degenerate inputs (< 2 points, flat data centered vertically), dynamic hit radius scaling based on point density. `src/components/RepoCard.astro` — Added `starHistory` prop, renders `Sparkline` in metadata row for repos with 2+ data points. `--color-sparkline` CSS tokens added for light (#0969da) and dark (#58a6ff) themes. Styles in `src/styles/repo-card.css` with `margin-inline-start: auto` to push sparkline right-aligned.
 
 ### Sort Options
 

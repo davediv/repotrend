@@ -168,6 +168,15 @@
 	font-weight: 500;
 }
 
+.sparkline-container {
+	margin-inline-start: auto;
+}
+
+.sparkline {
+	display: block;
+	overflow: visible;
+}
+
 @media (max-width: 640px) {
 	.repo-card {
 		padding: 0.75rem 0.75rem;
