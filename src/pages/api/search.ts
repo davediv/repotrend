@@ -1,4 +1,6 @@
 import type { APIRoute } from "astro";
+import { logError } from "../../lib/log";
+import type { SearchResult } from "../../lib/search-types";
 
 export const prerender = false;
 
@@ -27,18 +29,6 @@ interface SearchRow {
 	forks: number;
 	stars_today: number;
 	trending_date: string;
-}
-
-interface SearchResult {
-	repo_owner: string;
-	repo_name: string;
-	description: string | null;
-	language: string | null;
-	language_color: string | null;
-	total_stars: number;
-	forks: number;
-	stars_today: number;
-	dates: string[];
 }
 
 /** Escape SQL LIKE metacharacters (`%` and `_`) with backslash. */
@@ -72,6 +62,9 @@ export const GET: APIRoute = async ({ url, locals }) => {
 	const startsWithPattern = `${escaped}%`;
 
 	// Search across repo_owner, repo_name, and description using LIKE.
+	// Note: LIKE '%...%' (leading wildcard) forces a full table scan in SQLite/D1.
+	// Mitigated by SQL_ROW_LIMIT cap, 60s cache TTL, and MAX_QUERY_LENGTH.
+	// Consider SQLite FTS5 if table grows beyond ~100k rows.
 	// Relevance ordering:
 	//   1. Exact repo name match (owner/name = query)
 	//   2. Repo name starts with query
@@ -104,16 +97,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			.bind(likePattern, query, startsWithPattern, SQL_ROW_LIMIT)
 			.all<SearchRow>());
 	} catch (error) {
+		logError("search_query_error", { query })(error);
 		const message = error instanceof Error ? error.message : String(error);
-		console.error(
-			JSON.stringify({
-				level: "error",
-				event: "search_query_error",
-				timestamp: new Date().toISOString(),
-				query,
-				error: message,
-			}),
-		);
 		return new Response(JSON.stringify({ error: "Database query failed", detail: message }), {
 			status: 500,
 			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },

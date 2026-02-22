@@ -59,6 +59,24 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 					<span class="tagline">GitHub Trending Archive</span>
 				</a>
 				<nav aria-label="Site">
+					<form class="search-form" action="/search" method="get" role="search" aria-label="Search trending repos">
+						<label for="header-search" class="search-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<circle cx="11" cy="11" r="8"></circle>
+								<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+							</svg>
+							<span class="sr-only">Search</span>
+						</label>
+						<input
+							type="search"
+							id="header-search"
+							name="q"
+							class="search-input"
+							placeholder="Search trending repos..."
+							aria-label="Search trending repos"
+							autocomplete="off"
+						/>
+					</form>
 					<button
 						id="theme-toggle"
 						type="button"
@@ -357,6 +375,48 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 	nav {
 		display: flex;
 		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.search-form {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.search-icon {
+		position: absolute;
+		left: 0.625rem;
+		display: flex;
+		align-items: center;
+		color: var(--color-text-secondary);
+		cursor: text;
+	}
+
+	.search-input {
+		width: 200px;
+		height: 36px;
+		padding: 0 0.75rem 0 2.125rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		background: var(--color-bg-secondary);
+		color: var(--color-text);
+		font-family: inherit;
+		font-size: 0.8125rem;
+		transition:
+			border-color 0.15s,
+			background-color 0.15s,
+			width 0.2s;
+	}
+
+	.search-input::placeholder {
+		color: var(--color-text-secondary);
+	}
+
+	.search-input:focus {
+		width: 260px;
+		border-color: var(--color-accent);
+		background-color: var(--color-bg);
 	}
 
 	#theme-toggle {
@@ -461,6 +521,35 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 
 		.tagline {
 			display: none;
+		}
+
+		.search-input {
+			width: 0;
+			padding-left: 0;
+			padding-right: 0;
+			border-color: transparent;
+			background: transparent;
+		}
+
+		.search-form {
+			width: 36px;
+			overflow: hidden;
+			transition: width 0.2s;
+		}
+
+		.search-icon {
+			left: 0.5rem;
+		}
+
+		.search-input:focus {
+			width: 150px;
+			padding: 0 0.75rem 0 2.125rem;
+			border-color: var(--color-accent);
+			background-color: var(--color-bg);
+		}
+
+		.search-form:focus-within {
+			width: auto;
 		}
 
 		#theme-toggle {
