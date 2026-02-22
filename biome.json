@@ -20,7 +20,15 @@
 		}
 	},
 	"files": {
-		"includes": ["src/**", "scripts/**", "biome.json", "package.json", "tsconfig.json"]
+		"includes": [
+			"src/**",
+			"scripts/**",
+			"tests/**",
+			"biome.json",
+			"package.json",
+			"tsconfig.json",
+			"vitest.config.ts"
+		]
 	},
 	"overrides": [
 		{

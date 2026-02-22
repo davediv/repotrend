@@ -764,7 +764,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Testing
 
-- [ ] **TEST-P5-001**: Write unit tests for HTML parser (trending page extraction)
+- [x] **TEST-P5-001**: Write unit tests for HTML parser (trending page extraction)
   - **Success Criteria**:
     - Tests cover: successful parse of 25 repos, handling of missing fields, handling of malformed HTML
     - Tests use fixture HTML files (snapshot of actual trending page)
@@ -772,6 +772,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Parser edge cases covered: no description, no language, commas in star counts
     - Minimum 90% coverage of parser module
   - **Dependencies**: FEAT-P0-002
+  - **Completed**: 2026-02-23
+  - **Implementation**: `tests/parser.test.ts` — 36 unit tests covering `parseTrendingPage()` and `parseFormattedNumber()`. Fixture HTML files in `tests/fixtures/` (full 25-repo page, standard 3-repo page, missing optional fields, star format variations, empty/malformed page). Tests cover: full page extraction (25 repos), complete object shape via `toEqual`, individual field extraction (owner, name, description, language, color, stars, forks, stars_today), missing optional fields (null description, null language, null language_color, whitespace-only description), number formats (commas, plain, singular "star today", k-abbreviated, bare decimal), error handling (empty page, no articles, missing heading link, no href, invalid href), and edge cases (empty language text, invalid hex color, no style attribute, 3-digit shorthand hex, non-matching float text, missing stat elements). 100% coverage of parser module across all metrics (statements, branches, functions, lines). Vitest configured via `vitest.config.ts` with v8 coverage provider.
 
 - [ ] **TEST-P5-002**: Write unit tests for D1 persistence layer
   - **Success Criteria**:
