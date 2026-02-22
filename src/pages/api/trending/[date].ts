@@ -1,8 +1,7 @@
 import type { APIRoute } from "astro";
+import { isValidDate, todayUTC } from "../../../lib/dates";
 
 export const prerender = false;
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Seconds in one hour – used as TTL for today's cache entry. */
 const TODAY_TTL_SECONDS = 3600;
@@ -18,18 +17,6 @@ interface TrendingRow {
 	stars_today: number;
 	trending_date: string;
 	scraped_at: string;
-}
-
-function isValidDate(value: string): boolean {
-	if (!DATE_RE.test(value)) return false;
-	const [year, month, day] = value.split("-").map(Number);
-	const d = new Date(year, month - 1, day);
-	return d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day;
-}
-
-/** Return today's date in YYYY-MM-DD (UTC). */
-function todayUTC(): string {
-	return new Date().toISOString().slice(0, 10);
 }
 
 export const GET: APIRoute = async ({ params, locals }) => {

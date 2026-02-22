@@ -1,0 +1,17 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import DatePicker from "../../components/DatePicker.astro";
+import { isValidDate } from "../../lib/dates";
+
+export const prerender = false;
+
+const { date } = Astro.params;
+
+if (!date || !isValidDate(date)) {
+	return new Response(null, { status: 404, statusText: "Not Found" });
+}
+---
+
+<Layout title={`Trending ${date} — RepoTrend`}>
+	<DatePicker selectedDate={date} />
+</Layout>
