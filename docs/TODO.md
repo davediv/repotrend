@@ -286,7 +286,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: Enhanced `src/layouts/Layout.astro` — Inline `<script is:inline>` in `<head>` reads `localStorage('repotrend-theme')` with `prefers-color-scheme` fallback, adds `class="dark"` to `<html>` before paint (FOUC prevention). Dark mode CSS custom properties (GitHub-style dark palette) on `html.dark` with `color-scheme: dark`. Client `<script>` wires `#theme-toggle` button to toggle `.dark` class, persist to `localStorage`, and update `aria-label`. Sun/moon icon visibility toggled via `:global(html.dark)` scoped selectors.
 
-- [ ] **UI-P1-007**: Implement comprehensive dark mode color scheme
+- [x] **UI-P1-007**: Implement comprehensive dark mode color scheme
   - **Success Criteria**:
     - CSS custom properties define color tokens for both light and dark themes
     - Background colors: dark mode uses dark grays (e.g., `#0d1117`, `#161b22`)
@@ -303,6 +303,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Toggle to light mode and verify all elements revert
     - Use DevTools accessibility checker for contrast ratios
   - **Dependencies**: UI-P1-006
+  - **Completed**: 2026-02-22
+  - **Implementation**: Expanded CSS custom property token system in `src/layouts/Layout.astro` with new tokens: `--color-bg-tertiary`, `--color-border-hover`, `--color-shadow`, `--color-shadow-hover`, `--color-stars-today`. Both light and dark themes have organized, commented token blocks. All components updated to use tokens exclusively (zero hard-coded colors). Card shadows adapt via shadow tokens. Extracted shared repo card styles to `src/styles/repo-card.css` eliminating ~130 lines of duplication. Link hover states use `--color-link-hover` token.
 
 ### Pages & Routing
 

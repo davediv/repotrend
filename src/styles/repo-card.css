@@ -1,0 +1,131 @@
+/* Shared repo card styles consumed by both RepoCard.astro (SSR) and RepoCardList.astro (client). */
+
+.repo-card {
+	display: flex;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
+	background: var(--color-bg);
+	box-shadow: 0 1px 3px var(--color-shadow);
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
+}
+
+.repo-card:hover {
+	border-color: var(--color-border-hover);
+	box-shadow: 0 2px 6px var(--color-shadow-hover);
+}
+
+.repo-rank {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: 50%;
+	background: var(--color-bg-secondary);
+	color: var(--color-text-secondary);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.repo-content {
+	flex: 1;
+	min-width: 0;
+}
+
+.repo-name {
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.repo-name a {
+	color: var(--color-link);
+	text-decoration: none;
+}
+
+.repo-name a:hover {
+	color: var(--color-link-hover);
+	text-decoration: underline;
+}
+
+.repo-name a:focus-visible {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+.repo-owner {
+	font-weight: 400;
+	color: var(--color-link);
+}
+
+.repo-separator {
+	color: var(--color-text-secondary);
+	padding: 0 1px;
+}
+
+.repo-description {
+	margin: 0.375rem 0 0;
+	font-size: 0.875rem;
+	color: var(--color-text-secondary);
+	line-height: 1.5;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.repo-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 1rem;
+	margin-top: 0.625rem;
+	font-size: 0.8125rem;
+	color: var(--color-text-secondary);
+}
+
+.meta-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.meta-item svg {
+	flex-shrink: 0;
+}
+
+.language-dot {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background-color: var(--color-text-secondary);
+}
+
+.stars-today {
+	color: var(--color-stars-today);
+	font-weight: 500;
+}
+
+@media (max-width: 640px) {
+	.repo-card {
+		padding: 0.75rem 1rem;
+		gap: 0.75rem;
+	}
+
+	.repo-name {
+		font-size: 1rem;
+	}
+
+	.repo-meta {
+		gap: 0.75rem;
+	}
+}

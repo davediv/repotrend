@@ -1,4 +1,6 @@
 ---
+import "../styles/repo-card.css";
+
 interface Props {
 	title?: string;
 	description?: string;
@@ -144,15 +146,33 @@ const {
 	}
 
 	html {
+		/* Backgrounds */
 		--color-bg: #ffffff;
 		--color-bg-secondary: #f6f8fa;
+		--color-bg-tertiary: #eaeef2;
+
+		/* Text */
 		--color-text: #1f2328;
 		--color-text-secondary: #656d76;
+
+		/* Borders */
 		--color-border: #d0d7de;
+		--color-border-hover: #afb8c1;
+
+		/* Links */
 		--color-link: #0969da;
 		--color-link-hover: #0550ae;
+
+		/* Accent */
 		--color-accent: #0969da;
 		--color-accent-text: #ffffff;
+
+		/* Shadows */
+		--color-shadow: rgba(31, 35, 40, 0.04);
+		--color-shadow-hover: rgba(31, 35, 40, 0.1);
+
+		/* Stars highlight */
+		--color-stars-today: #9a6700;
 
 		margin: 0;
 		font-family:
@@ -165,15 +185,34 @@ const {
 	}
 
 	html.dark {
+		/* Backgrounds */
 		--color-bg: #0d1117;
 		--color-bg-secondary: #161b22;
+		--color-bg-tertiary: #21262d;
+
+		/* Text */
 		--color-text: #e6edf3;
 		--color-text-secondary: #8b949e;
+
+		/* Borders */
 		--color-border: #30363d;
+		--color-border-hover: #484f58;
+
+		/* Links */
 		--color-link: #58a6ff;
 		--color-link-hover: #79c0ff;
+
+		/* Accent */
 		--color-accent: #58a6ff;
 		--color-accent-text: #ffffff;
+
+		/* Shadows */
+		--color-shadow: rgba(0, 0, 0, 0.2);
+		--color-shadow-hover: rgba(0, 0, 0, 0.4);
+
+		/* Stars highlight */
+		--color-stars-today: #e3b341;
+
 		color-scheme: dark;
 	}
 
@@ -257,7 +296,7 @@ const {
 
 	#theme-toggle:hover {
 		color: var(--color-text);
-		border-color: var(--color-text-secondary);
+		border-color: var(--color-border-hover);
 	}
 
 	#theme-toggle:focus-visible {
@@ -320,6 +359,7 @@ const {
 	}
 
 	.footer-inner a:hover {
+		color: var(--color-link-hover);
 		text-decoration: underline;
 	}
 
