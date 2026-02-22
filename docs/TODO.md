@@ -702,7 +702,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/pages/api/compare.ts` — API route accepting `?date1=` and `?date2=` query parameters with YYYY-MM-DD validation (rejects invalid, missing, or identical dates with 400). Reuses `getTrendingRepos()` from `src/lib/trending.ts` for DRY D1 queries via `Promise.all`. Set-based comparison categorizes repos into `common` (full `TrendingRepo[]` objects), `only_date1`, and `only_date2`. Smart `Cache-Control` (immutable for historical pairs, 5min for today). Structured JSON logging with counts.
 
-- [ ] **UI-P4-003**: Implement side-by-side date comparison view
+- [x] **UI-P4-003**: Implement side-by-side date comparison view
   - **Success Criteria**:
     - Route `/compare?date1=YYYY-MM-DD&date2=YYYY-MM-DD` renders comparison view
     - Two-column layout showing each date's trending repos
@@ -719,6 +719,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Resize to mobile and verify columns stack vertically
     - Verify dark mode compatibility
   - **Dependencies**: API-P4-002, UI-P1-004
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/compare.astro` — SSR page with `date1`/`date2` query params, `isValidBrowseDate` validation, parallel `getTrendingRepos` D1 queries via `Promise.all`, set-based comparison computing common/unique repos. Two-column CSS Grid layout with `RepoCard` components, common repos highlighted with purple `--color-common` border/background tokens. Stats summary bar showing common/unique counts. Mobile (≤768px): columns stack with ARIA-compliant tab toggle (`role="tablist"`/`role="tabpanel"`, arrow key navigation). Date pickers with `max={today}` constraint and `focus-visible` styles. Shared `repoKey()` utility extracted to `src/lib/trending.ts`, deduplicating with `src/pages/api/compare.ts`. `ErrorFallback` reused for invalid date selection. CSS tokens `--color-common`, `--color-common-bg`, `--color-common-border` added to `Layout.astro` for both light and dark themes.
 
 ### Pagination
 

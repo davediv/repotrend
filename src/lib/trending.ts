@@ -1,3 +1,8 @@
+/** Build a unique key from a repo's owner and name. */
+export function repoKey(r: { repo_owner: string; repo_name: string }): string {
+	return `${r.repo_owner}/${r.repo_name}`;
+}
+
 /** Language distribution entry for a date or week. */
 export interface LanguageDistribution {
 	language: string;
