@@ -1,20 +1,13 @@
 import type { APIRoute } from "astro";
 import { isValidDate, todayUTC } from "../../../lib/dates";
+import type { TrendingRepo } from "../../../lib/trending";
 
 export const prerender = false;
 
 /** Seconds in one hour – used as TTL for today's cache entry. */
 const TODAY_TTL_SECONDS = 3600;
 
-interface TrendingRow {
-	repo_owner: string;
-	repo_name: string;
-	description: string | null;
-	language: string | null;
-	language_color: string | null;
-	total_stars: number;
-	forks: number;
-	stars_today: number;
+interface TrendingRow extends TrendingRepo {
 	trending_date: string;
 	scraped_at: string;
 }
