@@ -49,6 +49,7 @@ const appearanceLabel = appearances === 1 ? "1 day" : `${appearances} days`;
 					<span class="repo-owner">{repoOwner}</span>
 					<span class="repo-separator">/</span>
 					<span class="repo-name-text">{repoName}</span>
+					<span class="sr-only">(opens in new tab)</span>
 				</a>
 			</h2>
 			{appearances != null && (
@@ -70,7 +71,7 @@ const appearanceLabel = appearances === 1 ? "1 day" : `${appearances} days`;
 		<div class="repo-meta">
 			{language && (
 				<span class="meta-item language">
-					<span class="language-dot" style={safeColor ? `background-color: ${safeColor}` : undefined}></span>
+					<span class="language-dot" aria-hidden="true" style={safeColor ? `background-color: ${safeColor}` : undefined}></span>
 					{language}
 				</span>
 			)}
