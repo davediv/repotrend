@@ -75,4 +75,18 @@ const weeklyHref = `/trending/week/${getMondayOfWeek(currentDate)}`;
 		color: var(--color-accent-text);
 		cursor: default;
 	}
+
+	@media (max-width: 640px) {
+		.view-toggle {
+			display: flex;
+			width: 100%;
+		}
+
+		.view-toggle-btn {
+			flex: 1;
+			min-height: 44px;
+			padding: 0.625rem 0.875rem;
+			font-size: 0.875rem;
+		}
+	}
 </style>
