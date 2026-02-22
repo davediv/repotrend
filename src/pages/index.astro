@@ -3,11 +3,13 @@ import Layout from "../layouts/Layout.astro";
 import DatePicker from "../components/DatePicker.astro";
 import Toolbar from "../components/Toolbar.astro";
 import ViewToggle from "../components/ViewToggle.astro";
+import SortDropdown from "../components/SortDropdown.astro";
 import RepoCardList from "../components/RepoCardList.astro";
 import ErrorFallback from "../components/ErrorFallback.astro";
 import { todayUTC } from "../lib/dates";
 import { logError } from "../lib/log";
 import { getTrendingReposWithStreaks, type TrendingRepo } from "../lib/trending";
+import { parseSortParam, sortDailyRepos } from "../lib/sort";
 
 export const prerender = false;
 
@@ -15,6 +17,7 @@ const today = todayUTC();
 let effectiveDate = today;
 let repos: TrendingRepo[] = [];
 let hasError = false;
+const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
 try {
 	const db = Astro.locals.runtime.env.DB;
@@ -32,7 +35,7 @@ try {
 		effectiveDate = results[0].trending_date;
 	}
 
-	repos = await getTrendingReposWithStreaks(db, effectiveDate);
+	repos = sortDailyRepos(await getTrendingReposWithStreaks(db, effectiveDate), sort);
 } catch (error) {
 	hasError = true;
 	logError("homepage_ssr_error")(error);
@@ -46,6 +49,7 @@ try {
 	<Toolbar>
 		<DatePicker selectedDate={effectiveDate} viewMode="daily" />
 		<ViewToggle activeView="daily" currentDate={effectiveDate} />
+		<SortDropdown activeSort={sort} />
 	</Toolbar>
 	{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} />}
 </Layout>
