@@ -8,8 +8,10 @@ interface Props {
 
 const { activeView, currentDate } = Astro.props;
 
-const dailyHref = `/trending/${currentDate}`;
-const weeklyHref = `/trending/week/${getMondayOfWeek(currentDate)}`;
+// Preserve query parameters (e.g. ?sort=total_stars) when switching views
+const qs = Astro.url.search;
+const dailyHref = `/trending/${currentDate}${qs}`;
+const weeklyHref = `/trending/week/${getMondayOfWeek(currentDate)}${qs}`;
 ---
 
 <nav class="view-toggle" aria-label="View mode">

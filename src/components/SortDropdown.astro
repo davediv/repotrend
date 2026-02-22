@@ -1,0 +1,95 @@
+---
+import {
+	DEFAULT_SORT,
+	DAILY_SORT_OPTIONS,
+	WEEKLY_SORT_OPTIONS,
+	type SortKey,
+	type SortOption,
+} from "../lib/sort";
+
+interface Props {
+	activeSort: SortKey;
+	viewMode?: "daily" | "weekly";
+}
+
+const { activeSort, viewMode = "daily" } = Astro.props;
+const options: SortOption[] = viewMode === "weekly" ? WEEKLY_SORT_OPTIONS : DAILY_SORT_OPTIONS;
+---
+
+<div class="sort-dropdown">
+	<label for="sort-select" class="sort-label">Sort by</label>
+	<select id="sort-select" class="sort-select" aria-label="Sort repositories by" data-default-sort={DEFAULT_SORT}>
+		{options.map((opt) => (
+			<option value={opt.value} selected={opt.value === activeSort}>
+				{opt.label}
+			</option>
+		))}
+	</select>
+</div>
+
+<script>
+	const select = document.getElementById("sort-select") as HTMLSelectElement | null;
+	if (select) {
+		const defaultSort = select.dataset.defaultSort;
+		select.addEventListener("change", () => {
+			const url = new URL(window.location.href);
+			if (select.value === defaultSort) {
+				url.searchParams.delete("sort");
+			} else {
+				url.searchParams.set("sort", select.value);
+			}
+			window.location.href = url.href;
+		});
+	}
+</script>
+
+<style>
+	.sort-dropdown {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.sort-label {
+		font-size: 0.8125rem;
+		color: var(--color-text-secondary);
+		white-space: nowrap;
+	}
+
+	.sort-select {
+		height: 36px;
+		padding: 0 2rem 0 0.625rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		background-color: var(--color-bg);
+		color: var(--color-text);
+		font-family: inherit;
+		font-size: 0.8125rem;
+		cursor: pointer;
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23656d76' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 0.625rem center;
+		transition: border-color 0.15s;
+	}
+
+	.sort-select:hover {
+		border-color: var(--color-border-hover);
+	}
+
+	:global(html.dark) .sort-select {
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	}
+
+	@media (max-width: 640px) {
+		.sort-dropdown {
+			width: 100%;
+		}
+
+		.sort-select {
+			flex: 1;
+			min-height: 44px;
+			font-size: 0.875rem;
+		}
+	}
+</style>

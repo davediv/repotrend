@@ -245,10 +245,13 @@ const datetimeAttr =
 		}
 
 		private goToDate(date: string): void {
+			const params = new URLSearchParams(window.location.search);
+			const qs = params.toString();
+			const suffix = qs ? `?${qs}` : "";
 			if (this.viewMode === "weekly") {
-				window.location.href = `/trending/week/${getMondayOfWeek(date)}`;
+				window.location.href = `/trending/week/${getMondayOfWeek(date)}${suffix}`;
 			} else {
-				window.location.href = `/trending/${date}`;
+				window.location.href = `/trending/${date}${suffix}`;
 			}
 		}
 

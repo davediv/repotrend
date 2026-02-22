@@ -614,7 +614,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Sort Options
 
-- [ ] **UI-P3-005**: Implement sort dropdown for repo card list
+- [x] **UI-P3-005**: Implement sort dropdown for repo card list
   - **Success Criteria**:
     - Dropdown with options: "Stars Gained Today" (default), "Total Stars", "Alphabetical (A–Z)"
     - Selecting an option immediately re-sorts the displayed cards
@@ -630,6 +630,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Navigate to a different date and verify sort preference persists
     - Tab to dropdown and verify keyboard selection works
   - **Dependencies**: UI-P1-005
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/sort.ts` — Sort utility with `SortKey` type (`stars_today`, `total_stars`, `alpha`), view-aware option labels (`DAILY_SORT_OPTIONS`/`WEEKLY_SORT_OPTIONS`), generic `sortRepos()` parameterised on default comparator, `parseSortParam()` for URL validation. `src/components/SortDropdown.astro` — `<select>` dropdown with `viewMode` prop for context-appropriate labels, `data-default-sort` attribute for client-side default detection, custom chevron SVG for light/dark themes, 44px mobile touch targets. Integrated into all 3 pages (index, daily, weekly) with SSR-side sorting via `sortDailyRepos`/`sortWeeklyRepos`. DatePicker and ViewToggle updated to preserve `?sort` query parameter across navigation.
 
 ---
 

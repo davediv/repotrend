@@ -3,6 +3,7 @@ import Layout from "../../../layouts/Layout.astro";
 import DatePicker from "../../../components/DatePicker.astro";
 import Toolbar from "../../../components/Toolbar.astro";
 import ViewToggle from "../../../components/ViewToggle.astro";
+import SortDropdown from "../../../components/SortDropdown.astro";
 import RepoCardList from "../../../components/RepoCardList.astro";
 import ErrorFallback from "../../../components/ErrorFallback.astro";
 import {
@@ -14,6 +15,7 @@ import {
 } from "../../../lib/dates";
 import { logError } from "../../../lib/log";
 import { getWeeklyTrendingRepos, type WeeklyTrendingRepo } from "../../../lib/trending";
+import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
 
 export const prerender = false;
 
@@ -32,6 +34,7 @@ if (date !== monday) {
 
 const weekLabel = formatWeekRange(date);
 const weekEnd = getSundayOfWeek(monday);
+const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
 let repos: WeeklyTrendingRepo[] = [];
 let partial = false;
@@ -39,7 +42,7 @@ let hasError = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
 	const result = await getWeeklyTrendingRepos(db, monday, weekEnd);
-	repos = result.repos;
+	repos = sortWeeklyRepos(result.repos, sort);
 	const today = todayUTC();
 	const weekNotFinished = weekEnd > today;
 	partial = weekNotFinished || result.daysWithData < 7;
@@ -56,6 +59,7 @@ try {
 	<Toolbar>
 		<DatePicker selectedDate={date} viewMode="weekly" />
 		<ViewToggle activeView="weekly" currentDate={date} />
+		<SortDropdown activeSort={sort} viewMode="weekly" />
 	</Toolbar>
 	{hasError ? <ErrorFallback /> : <RepoCardList viewMode="weekly" repos={repos} weekLabel={weekLabel} weekStart={monday} partial={partial} />}
 </Layout>
