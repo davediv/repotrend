@@ -153,7 +153,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/pages/api/dates.ts` — Astro API route returning distinct trending dates from D1 with `Cache-Control: public, max-age=300, s-maxage=300`, leverages `idx_trending_repos_trending_date` index for efficient DISTINCT+ORDER BY
 
-- [ ] **API-P1-003**: Implement KV caching layer for date-based API responses
+- [x] **API-P1-003**: Implement KV caching layer for date-based API responses
   - **Success Criteria**:
     - API checks KV cache before querying D1
     - Cache key format: `trending:{date}` stores serialized JSON
@@ -162,6 +162,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Cache miss falls through to D1 query, then populates cache
     - Cache hit returns data without D1 query (verified via logs)
   - **Dependencies**: INFRA-P0-002, API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: Enhanced `src/pages/api/trending/[date].ts` — KV cache check before D1 query with `trending:{date}` key format, 1h TTL for today (UTC) and indefinite for historical dates, empty results skipped to allow backfills, structured JSON logs with level/timestamp for cache hit/miss/error, `Cache-Control` headers (immutable for historical, 5min for today), typed `TrendingRow` interface
 
 ### Layout & Navigation
 
