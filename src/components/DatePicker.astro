@@ -246,6 +246,7 @@ const datetimeAttr =
 
 		private goToDate(date: string): void {
 			const params = new URLSearchParams(window.location.search);
+			params.delete("page");
 			const qs = params.toString();
 			const suffix = qs ? `?${qs}` : "";
 			if (this.viewMode === "weekly") {

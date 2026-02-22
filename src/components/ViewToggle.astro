@@ -8,8 +8,10 @@ interface Props {
 
 const { activeView, currentDate } = Astro.props;
 
-// Preserve query parameters (e.g. ?sort=total_stars) when switching views
-const qs = Astro.url.search;
+// Preserve query parameters (e.g. ?sort=total_stars) when switching views, but reset page
+const params = new URLSearchParams(Astro.url.search);
+params.delete("page");
+const qs = params.toString() ? `?${params.toString()}` : "";
 const dailyHref = `/trending/${currentDate}${qs}`;
 const weeklyHref = `/trending/week/${getMondayOfWeek(currentDate)}${qs}`;
 ---
