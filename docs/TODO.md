@@ -545,7 +545,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Full-Text Search
 
-- [ ] **API-P3-003**: Implement search API endpoint across historical data
+- [x] **API-P3-003**: Implement search API endpoint across historical data
   - **Success Criteria**:
     - `GET /api/search?q={query}` searches across `repo_owner`, `repo_name`, and `description` fields
     - Uses D1 `LIKE` queries or FTS (if available) for matching
@@ -555,6 +555,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Returns empty results for queries shorter than 2 characters
     - Response includes total result count
   - **Dependencies**: DB-P0-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/api/search.ts` — API route accepting `?q=` query parameter with min 2 / max 100 character validation. D1 LIKE queries across `repo_owner`, `repo_name`, and `description` with proper LIKE metacharacter escaping (`%`, `_`, `\`). Results grouped by unique repo with array of trending dates, ordered by relevance tiers (exact match → starts-with → name contains → description-only), then by recency and stars. SQL LIMIT 750 cap to prevent resource exhaustion. Structured JSON error logging. Response includes `total` count, 60s cache TTL.
 
 - [ ] **UI-P3-003**: Implement search input in header with results page
   - **Success Criteria**:
