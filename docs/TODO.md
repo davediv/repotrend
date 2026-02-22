@@ -115,13 +115,15 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/scraper/pipeline.ts` — `runScrapePipeline()` orchestrates fetch→parse→persist with structured JSON logging; `src/pages/api/cron.ts` — API route exposing the pipeline; `scripts/inject-scheduled.mjs` — post-build script injecting `scheduled` handler into compiled Worker via self-fetch to `/api/cron`
 
-- [ ] **FEAT-P0-005**: Add scrape health logging and failure tracking
+- [x] **FEAT-P0-005**: Add scrape health logging and failure tracking
   - **Success Criteria**:
     - Each scrape attempt logs: timestamp, success/failure, repos captured count, duration in ms
     - Failed scrapes log the error type and message
     - Logs are visible in Cloudflare dashboard (observability is already enabled)
     - Console output is structured (JSON-formatted log lines)
   - **Dependencies**: FEAT-P0-004
+  - **Completed**: 2026-02-22
+  - **Implementation**: Enhanced `src/lib/scraper/pipeline.ts` — added `scrape_start` log event, ISO 8601 `timestamp` field on all log lines, error type classification (`fetch_error`, `parse_error`, `persist_error`) via stage-level try/catch, and `errorType` in `ScrapeResult`. Updated `scripts/inject-scheduled.mjs` with timestamps on cron handler logs.
 
 ---
 
