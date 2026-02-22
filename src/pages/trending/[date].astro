@@ -4,20 +4,23 @@ import DatePicker from "../../components/DatePicker.astro";
 import Toolbar from "../../components/Toolbar.astro";
 import ViewToggle from "../../components/ViewToggle.astro";
 import RepoCardList from "../../components/RepoCardList.astro";
-import { formatDateDisplay, isValidDate } from "../../lib/dates";
+import { formatDateDisplay, isValidBrowseDate } from "../../lib/dates";
 
 export const prerender = false;
 
 const { date } = Astro.params;
 
-if (!date || !isValidDate(date)) {
-	return new Response(null, { status: 404, statusText: "Not Found" });
+if (!date || !isValidBrowseDate(date)) {
+	return Astro.rewrite("/404");
 }
 
 const displayDate = formatDateDisplay(date);
 ---
 
-<Layout title={`Trending ${displayDate} — RepoTrend`}>
+<Layout
+	title={`Trending ${displayDate} — RepoTrend`}
+	description={`GitHub trending repositories for ${displayDate}. Browse the most popular open-source projects that trended on ${displayDate}.`}
+>
 	<Toolbar>
 		<DatePicker selectedDate={date} viewMode="daily" />
 		<ViewToggle activeView="daily" currentDate={date} />

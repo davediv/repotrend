@@ -4,14 +4,14 @@ import DatePicker from "../../../components/DatePicker.astro";
 import Toolbar from "../../../components/Toolbar.astro";
 import ViewToggle from "../../../components/ViewToggle.astro";
 import RepoCardList from "../../../components/RepoCardList.astro";
-import { formatWeekRange, getMondayOfWeek, isValidDate } from "../../../lib/dates";
+import { formatWeekRange, getMondayOfWeek, isValidBrowseDate } from "../../../lib/dates";
 
 export const prerender = false;
 
 const { date } = Astro.params;
 
-if (!date || !isValidDate(date)) {
-	return new Response(null, { status: 404, statusText: "Not Found" });
+if (!date || !isValidBrowseDate(date)) {
+	return Astro.rewrite("/404");
 }
 
 const monday = getMondayOfWeek(date);
@@ -24,7 +24,10 @@ if (date !== monday) {
 const weekLabel = formatWeekRange(date);
 ---
 
-<Layout title={`Trending ${weekLabel} — RepoTrend`}>
+<Layout
+	title={`Trending ${weekLabel} — RepoTrend`}
+	description={`Weekly GitHub trending repositories for ${weekLabel}. Browse the most popular open-source projects from the week of ${weekLabel}.`}
+>
 	<Toolbar>
 		<DatePicker selectedDate={date} viewMode="weekly" />
 		<ViewToggle activeView="weekly" currentDate={date} />
