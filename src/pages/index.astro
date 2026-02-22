@@ -7,7 +7,7 @@ import RepoCardList from "../components/RepoCardList.astro";
 import ErrorFallback from "../components/ErrorFallback.astro";
 import { todayUTC } from "../lib/dates";
 import { logError } from "../lib/log";
-import { getTrendingRepos, type TrendingRepo } from "../lib/trending";
+import { getTrendingReposWithStreaks, type TrendingRepo } from "../lib/trending";
 
 export const prerender = false;
 
@@ -32,7 +32,7 @@ try {
 		effectiveDate = results[0].trending_date;
 	}
 
-	repos = await getTrendingRepos(db, effectiveDate);
+	repos = await getTrendingReposWithStreaks(db, effectiveDate);
 } catch (error) {
 	hasError = true;
 	logError("homepage_ssr_error")(error);
