@@ -4,6 +4,22 @@ export const prerender = false;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Seconds in one hour – used as TTL for today's cache entry. */
+const TODAY_TTL_SECONDS = 3600;
+
+interface TrendingRow {
+  repo_owner: string;
+  repo_name: string;
+  description: string | null;
+  language: string | null;
+  language_color: string | null;
+  total_stars: number;
+  forks: number;
+  stars_today: number;
+  trending_date: string;
+  scraped_at: string;
+}
+
 function isValidDate(value: string): boolean {
   if (!DATE_RE.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
@@ -13,6 +29,11 @@ function isValidDate(value: string): boolean {
     d.getMonth() === month - 1 &&
     d.getDate() === day
   );
+}
+
+/** Return today's date in YYYY-MM-DD (UTC). */
+function todayUTC(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export const GET: APIRoute = async ({ params, locals }) => {
@@ -25,9 +46,31 @@ export const GET: APIRoute = async ({ params, locals }) => {
     );
   }
 
-  const db = locals.runtime.env.DB;
+  const { DB: db, CACHE: kv } = locals.runtime.env;
+  const cacheKey = `trending:${date}`;
+  const isToday = date === todayUTC();
+  const cacheControl = isToday
+    ? "public, max-age=300, s-maxage=300"
+    : "public, max-age=86400, s-maxage=86400, immutable";
 
-  let results;
+  // 1. Check KV cache
+  const cached = await kv.get(cacheKey);
+  if (cached !== null) {
+    console.log(
+      JSON.stringify({ level: "info", event: "cache_hit", timestamp: new Date().toISOString(), date, cacheKey }),
+    );
+    return new Response(cached, {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Cache-Control": cacheControl },
+    });
+  }
+
+  console.log(
+    JSON.stringify({ level: "info", event: "cache_miss", timestamp: new Date().toISOString(), date, cacheKey }),
+  );
+
+  // 2. Fall through to D1
+  let results: TrendingRow[];
   try {
     ({ results } = await db
       .prepare(
@@ -38,17 +81,30 @@ export const GET: APIRoute = async ({ params, locals }) => {
           ORDER BY stars_today DESC`,
       )
       .bind(date)
-      .all());
+      .all<TrendingRow>());
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: "Database query failed", detail: message }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      { status: 500, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
     );
   }
 
-  return new Response(JSON.stringify(results), {
+  // 3. Populate KV cache (skip empty results to allow future backfills)
+  const json = JSON.stringify(results);
+  if (results.length > 0) {
+    try {
+      await kv.put(cacheKey, json, isToday ? { expirationTtl: TODAY_TTL_SECONDS } : undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(
+        JSON.stringify({ level: "error", event: "cache_put_error", timestamp: new Date().toISOString(), date, cacheKey, error: message }),
+      );
+    }
+  }
+
+  return new Response(json, {
     status: 200,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Cache-Control": cacheControl },
   });
 };
