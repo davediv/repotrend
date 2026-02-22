@@ -9,7 +9,12 @@
 		"astro": "astro",
 		"deploy": "astro build && node scripts/inject-scheduled.mjs && wrangler deploy",
 		"cf-typegen": "wrangler types",
-		"db:seed": "wrangler d1 execute repotrend-db --local --file=./scripts/seed.sql"
+		"db:seed": "wrangler d1 execute repotrend-db --local --file=./scripts/seed.sql",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"format:check": "biome format .",
+		"check": "biome check --write .",
+		"typecheck": "astro check"
 	},
 	"dependencies": {
 		"@astrojs/check": "^0.9.6",
@@ -19,6 +24,7 @@
 		"typescript": "^5.9.3"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "2.4.4",
 		"@types/node": "^25.3.0",
 		"wrangler": "^4.67.0"
 	}

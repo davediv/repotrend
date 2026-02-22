@@ -15,15 +15,14 @@ const original = readFileSync(ENTRY, "utf-8");
 //   export { __astrojsSsrVirtualEntry as default, pageMap };
 // We replace this to wrap it with a scheduled handler.
 
-const OLD_EXPORT =
-  "export { __astrojsSsrVirtualEntry as default, pageMap };";
+const OLD_EXPORT = "export { __astrojsSsrVirtualEntry as default, pageMap };";
 
 if (!original.includes(OLD_EXPORT)) {
-  console.error(
-    "inject-scheduled: Could not find expected export line in compiled worker. " +
-      "The Astro Cloudflare adapter output format may have changed.",
-  );
-  process.exit(1);
+	console.error(
+		"inject-scheduled: Could not find expected export line in compiled worker. " +
+			"The Astro Cloudflare adapter output format may have changed.",
+	);
+	process.exit(1);
 }
 
 const SCHEDULED_HANDLER = `
