@@ -467,7 +467,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Error Handling
 
-- [ ] **UI-P2-004**: Implement 404 page and error boundary
+- [x] **UI-P2-004**: Implement 404 page and error boundary
   - **Success Criteria**:
     - Custom 404 page renders for unknown routes
     - 404 page includes navigation back to homepage
@@ -480,6 +480,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Verify 404 page respects dark mode setting
     - Check Console for any unhandled errors
   - **Dependencies**: UI-P1-001, UI-P1-006
+  - **Completed**: 2026-02-22
+  - **Implementation**: Refactored `src/pages/404.astro` to reuse new `src/components/ErrorFallback.astro` — a configurable error UI component with heading, message, icon variant, and optional retry button props. Created `src/middleware.ts` as a global error boundary that catches unhandled rendering errors (returns styled 500 HTML page for page routes, JSON for `/api/` routes). All SSR pages (`index.astro`, `trending/[date].astro`, `trending/week/[date].astro`) updated to show `ErrorFallback` on D1 query failures instead of silently rendering empty results. Extracted structured logging into `src/lib/log.ts` (`logError` helper) to eliminate duplication across all error handlers.
 
 ---
 

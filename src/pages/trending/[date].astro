@@ -4,7 +4,9 @@ import DatePicker from "../../components/DatePicker.astro";
 import Toolbar from "../../components/Toolbar.astro";
 import ViewToggle from "../../components/ViewToggle.astro";
 import RepoCardList from "../../components/RepoCardList.astro";
+import ErrorFallback from "../../components/ErrorFallback.astro";
 import { formatDateDisplay, isValidBrowseDate } from "../../lib/dates";
+import { logError } from "../../lib/log";
 import { getTrendingRepos, type TrendingRepo } from "../../lib/trending";
 
 export const prerender = false;
@@ -18,20 +20,13 @@ if (!date || !isValidBrowseDate(date)) {
 const displayDate = formatDateDisplay(date);
 
 let repos: TrendingRepo[] = [];
+let hasError = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
 	repos = await getTrendingRepos(db, date);
 } catch (error) {
-	const message = error instanceof Error ? error.message : String(error);
-	console.error(
-		JSON.stringify({
-			level: "error",
-			event: "trending_date_ssr_error",
-			timestamp: new globalThis.Date().toISOString(),
-			date,
-			error: message,
-		}),
-	);
+	hasError = true;
+	logError("trending_date_ssr_error", { date })(error);
 }
 ---
 
@@ -43,5 +38,5 @@ try {
 		<DatePicker selectedDate={date} viewMode="daily" />
 		<ViewToggle activeView="daily" currentDate={date} />
 	</Toolbar>
-	<RepoCardList repos={repos} />
+	{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} />}
 </Layout>

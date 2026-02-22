@@ -1,0 +1,120 @@
+---
+/**
+ * Reusable fallback UI for error states (404, 500, D1 failures, etc.).
+ * Accepts optional props to customise the heading, message, and icon.
+ * Used by the 404 page, SSR error states, and anywhere a friendly
+ * "something went wrong" screen is needed.
+ */
+
+interface Props {
+	/** Heading text. */
+	heading?: string;
+	/** Descriptive paragraph below the heading. */
+	message?: string;
+	/** Which SVG icon to show: "warning" (triangle) or "info" (circle). */
+	icon?: "warning" | "info";
+	/** Whether to show the "Try again" (reload) button. */
+	showRetry?: boolean;
+}
+
+const {
+	heading = "Something went wrong",
+	message = "Failed to load data. Please try again.",
+	icon = "warning",
+	showRetry = true,
+} = Astro.props;
+---
+
+<div class="error-fallback" role="alert">
+	{icon === "warning" ? (
+		<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+			stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+			<line x1="12" y1="9" x2="12" y2="13" />
+			<line x1="12" y1="17" x2="12.01" y2="17" />
+		</svg>
+	) : (
+		<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+			stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<circle cx="12" cy="12" r="10" />
+			<line x1="12" y1="8" x2="12" y2="12" />
+			<line x1="12" y1="16" x2="12.01" y2="16" />
+		</svg>
+	)}
+	<h1>{heading}</h1>
+	<p>{message}</p>
+	<div class="error-actions">
+		{showRetry && <button class="error-retry" onclick="location.reload()">Try again</button>}
+		<a href="/" class="error-home">Back to homepage</a>
+	</div>
+</div>
+
+<style>
+	.error-fallback {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		padding: 4rem 1rem;
+		color: var(--color-text-secondary);
+		text-align: center;
+	}
+
+	.error-fallback h1 {
+		margin: 0;
+		font-size: 1.5rem;
+		color: var(--color-text);
+	}
+
+	.error-fallback p {
+		margin: 0;
+		font-size: 1rem;
+	}
+
+	.error-actions {
+		display: flex;
+		gap: 0.75rem;
+		margin-top: 0.5rem;
+		flex-wrap: wrap;
+		justify-content: center;
+	}
+
+	.error-retry,
+	.error-home {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.625rem 1.5rem;
+		min-height: 44px;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		font-family: inherit;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+		cursor: pointer;
+		transition:
+			border-color 0.15s,
+			background-color 0.15s;
+	}
+
+	.error-retry {
+		background: var(--color-accent);
+		color: var(--color-accent-text);
+		border-color: var(--color-accent);
+	}
+
+	.error-retry:hover {
+		opacity: 0.9;
+	}
+
+	.error-home {
+		background: var(--color-bg);
+		color: var(--color-text);
+	}
+
+	.error-home:hover {
+		border-color: var(--color-border-hover);
+		background-color: var(--color-bg-secondary);
+	}
+</style>
