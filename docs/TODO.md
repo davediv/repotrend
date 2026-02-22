@@ -407,7 +407,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Weekly View UI
 
-- [ ] **UI-P2-001**: Implement weekly view page (`/trending/week/[date]`)
+- [x] **UI-P2-001**: Implement weekly view page (`/trending/week/[date]`)
   - **Success Criteria**:
     - Route `/trending/week/YYYY-MM-DD` displays the weekly aggregation for the week containing that date
     - Week range (Mon–Sun) is displayed prominently (e.g., "Feb 10 – Feb 16, 2026")
@@ -424,6 +424,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Verify partial week indicator appears for incomplete weeks
     - Check Network tab for correct API call
   - **Dependencies**: API-P2-001, UI-P1-003, UI-P1-004
+  - **Completed**: 2026-02-22
+  - **Implementation**: Updated `src/pages/trending/week/[date].astro` to use `getWeeklyTrendingRepos` for weekly aggregation with partial-week detection. Extended `src/components/RepoCard.astro` with optional `appearances` prop for weekly appearance count badge. Extended `src/components/RepoCardList.astro` with `weekLabel`/`partial` props for week range header and partial-week indicator. Added `.repo-title-row` and `.appearances-badge` styles to `src/styles/repo-card.css`. Repos ranked by appearance frequency then total stars gained, showing "X days" badge and "Y this week" star totals.
 
 ### Accessibility
 
