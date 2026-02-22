@@ -38,6 +38,7 @@ const options: SortOption[] = viewMode === "weekly" ? WEEKLY_SORT_OPTIONS : DAIL
 			} else {
 				url.searchParams.set("sort", select.value);
 			}
+			url.searchParams.delete("page");
 			window.location.href = url.href;
 		});
 	}

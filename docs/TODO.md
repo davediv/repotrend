@@ -724,7 +724,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Pagination
 
-- [ ] **UI-P4-004**: Implement pagination for weekly aggregations exceeding 25 repos
+- [x] **UI-P4-004**: Implement pagination for weekly aggregations exceeding 25 repos
   - **Success Criteria**:
     - When weekly view returns > 25 repos, pagination UI appears at the bottom
     - Shows page numbers and previous/next buttons
@@ -741,6 +741,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Click next/previous buttons and verify they work
     - Verify page scrolls to top on page change
   - **Dependencies**: UI-P2-001, API-P2-001
+  - **Completed**: 2026-02-23
+  - **Implementation**: `src/lib/pagination.ts` — `PAGE_SIZE = 25`, `PaginationInfo` interface, `paginate()` for page calculation with upper-bound clamping, `parsePageParam()` for URL validation, `pageNumbers()` with ellipsis logic for compact page navigation. `src/components/Pagination.astro` — Prev/Next buttons (disabled `<span>` vs active `<a>`), page numbers with ellipsis, current page as non-clickable `<span>` with `aria-current="page"`, DRY chevron SVGs via `Fragment set:html`, `#results` hash for stateless scroll-to-top, responsive 44px mobile touch targets. Integrated into `src/pages/trending/week/[date].astro` with `rankOffset` for correct numbering. `DatePicker`, `SortDropdown`, `ViewToggle` all reset `?page` on navigation.
 
 ### Scrape Retry Logic
 

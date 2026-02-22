@@ -15,9 +15,11 @@ interface Props {
 	weekStart?: string;
 	/** Whether the week has fewer than 7 days of data (weekly view only). */
 	partial?: boolean;
+	/** Offset for rank numbering when paginated (0-based index of first item). */
+	rankOffset?: number;
 }
 
-const { viewMode = "daily", repos, weekLabel, weekStart, partial } = Astro.props;
+const { viewMode = "daily", repos, weekLabel, weekStart, partial, rankOffset = 0 } = Astro.props;
 const isWeekly = viewMode === "weekly";
 const emptyMessage = isWeekly
 	? "No trending data available for this week."
@@ -37,11 +39,11 @@ const weekDatetime = weekStart ? `${weekStart}/${getSundayOfWeek(weekStart)}` : 
 )}
 
 {repos.length > 0 ? (
-	<ol class="card-list-results" aria-label={isWeekly ? "Weekly trending repositories" : "Trending repositories"}>
+	<ol id="results" class="card-list-results" aria-label={isWeekly ? "Weekly trending repositories" : "Trending repositories"}>
 		{repos.map((repo, i) => (
 			<li>
 				<RepoCard
-					rank={i + 1}
+					rank={rankOffset + i + 1}
 					repoOwner={repo.repo_owner}
 					repoName={repo.repo_name}
 					description={repo.description}

@@ -23,6 +23,8 @@ import {
 	type WeeklyTrendingRepo,
 } from "../../../lib/trending";
 import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
+import { paginate, parsePageParam } from "../../../lib/pagination";
+import Pagination from "../../../components/Pagination.astro";
 import LanguageChart from "../../../components/LanguageChart.astro";
 import CalendarHeatmap from "../../../components/CalendarHeatmap.astro";
 
@@ -45,7 +47,7 @@ const weekLabel = formatWeekRange(date);
 const weekEnd = getSundayOfWeek(monday);
 const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
-let repos: WeeklyTrendingRepo[] = [];
+let allRepos: WeeklyTrendingRepo[] = [];
 let languages: LanguageDistribution[] = [];
 let dateCounts: DateRepoCount[] = [];
 let partial = false;
@@ -53,7 +55,7 @@ let hasError = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
 	const result = await getWeeklyTrendingRepos(db, monday, weekEnd);
-	repos = sortWeeklyRepos(result.repos, sort);
+	allRepos = sortWeeklyRepos(result.repos, sort);
 	const today = todayUTC();
 	const weekNotFinished = weekEnd > today;
 	partial = weekNotFinished || result.daysWithData < 7;
@@ -71,6 +73,11 @@ try {
 	hasError = true;
 	logError("trending_week_ssr_error", { date })(error);
 }
+
+// Paginate the sorted repos
+const page = parsePageParam(Astro.url.searchParams.get("page"));
+const paginationInfo = paginate(allRepos.length, page);
+const repos = allRepos.slice(paginationInfo.startIndex, paginationInfo.endIndex);
 ---
 
 <Layout
@@ -84,5 +91,17 @@ try {
 	</Toolbar>
 	<LanguageChart languages={languages} />
 	<CalendarHeatmap dateCounts={dateCounts} selectedDate={date} />
-	{hasError ? <ErrorFallback /> : <RepoCardList viewMode="weekly" repos={repos} weekLabel={weekLabel} weekStart={monday} partial={partial} />}
+	{hasError ? <ErrorFallback /> : (
+		<>
+			<RepoCardList
+				viewMode="weekly"
+				repos={repos}
+				weekLabel={weekLabel}
+				weekStart={monday}
+				partial={partial}
+				rankOffset={paginationInfo.startIndex}
+			/>
+			<Pagination pagination={paginationInfo} />
+		</>
+	)}
 </Layout>
