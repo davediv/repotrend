@@ -528,7 +528,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/trending.ts` — Added `detectNewEntries()` using NOT EXISTS subquery for efficient short-circuit evaluation on the `(repo_owner, repo_name)` index. `is_new_entry` boolean added to `TrendingRepo` interface. Integrated into `getTrendingReposWithStreaks()` wrapper (SSR path) and `/api/trending/[date]` endpoint (API path) with non-fatal error handling. Repos with no prior archive appearance are flagged `is_new_entry: true`.
 
-- [ ] **UI-P3-002**: Display "New" badge on first-time trending repos
+- [x] **UI-P3-002**: Display "New" badge on first-time trending repos
   - **Success Criteria**:
     - Cards show a "NEW" badge for repos flagged as `is_new_entry: true`
     - Badge is visually distinct from the streak badge (different color, e.g., green)
@@ -540,6 +540,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Hover over badge and verify tooltip
     - Verify badge is readable in both light and dark modes
   - **Dependencies**: API-P3-002, UI-P1-004
+  - **Completed**: 2026-02-22
+  - **Implementation**: Added `isNewEntry` prop to `src/components/RepoCard.astro` with green "NEW" badge (checkmark SVG icon) in title row for repos with `is_new_entry: true`, tooltip "First time appearing on GitHub Trending", screen-reader accessible text. `src/components/RepoCardList.astro` passes `is_new_entry` from `TrendingRepo` to `RepoCard` (daily view only). Added `--color-new-entry`, `--color-new-entry-bg`, `--color-new-entry-border` CSS tokens for light and dark themes in `src/layouts/Layout.astro`. Consolidated all badge base styles (appearances, streak, new-entry) into a shared CSS rule in `src/styles/repo-card.css`, reducing duplication.
 
 ### Full-Text Search
 
