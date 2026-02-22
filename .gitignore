@@ -32,3 +32,6 @@ pnpm-debug.log*
 # ralph automation runner logs and named pipes
 ralph.sh
 .ralph/
+
+# docs
+docs/
