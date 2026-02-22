@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { isValidDate, todayUTC } from "../../../lib/dates";
-import { calculateStreaks, type TrendingRepo } from "../../../lib/trending";
+import { calculateStreaks, detectNewEntries, type TrendingRepo } from "../../../lib/trending";
 
 export const prerender = false;
 
@@ -78,6 +78,11 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		});
 	}
 
+	// 3–4. Enrich results with streak and new-entry data.
+	// NOTE: This mirrors getTrendingReposWithStreaks() — keep in sync.
+	// The API endpoint uses its own query (for trending_date/scraped_at columns)
+	// so cannot reuse the wrapper directly.
+
 	// 3. Calculate trending streaks for each repo
 	try {
 		await calculateStreaks(db, date, results);
@@ -95,7 +100,24 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		// Non-fatal: results are still valid without streaks
 	}
 
-	// 4. Populate KV cache (skip empty results to allow future backfills)
+	// 4. Detect first-time trending repos
+	try {
+		await detectNewEntries(db, date, results);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.error(
+			JSON.stringify({
+				level: "error",
+				event: "new_entry_detect_error",
+				timestamp: new Date().toISOString(),
+				date,
+				error: message,
+			}),
+		);
+		// Non-fatal: results are still valid without new-entry flags
+	}
+
+	// 5. Populate KV cache (skip empty results to allow future backfills)
 	const json = JSON.stringify(results);
 	if (results.length > 0) {
 		try {

@@ -10,6 +10,8 @@ export interface TrendingRepo {
 	stars_today: number;
 	/** Consecutive-day trending streak ending on the queried date (1 = single day). */
 	streak?: number;
+	/** Whether this is the repo's first appearance in the archive. */
+	is_new_entry?: boolean;
 }
 
 /** Shape of a weekly-aggregated trending repo. */
@@ -117,10 +119,10 @@ export async function getWeeklyTrendingRepos(
 const STREAK_LOOKBACK_DAYS = 60;
 
 /**
- * Fetch trending repos for a date with streak data included.
- * Wraps `getTrendingRepos` + `calculateStreaks` into a single call.
- * Streak errors are non-fatal — repos are returned without streaks if the
- * streak query fails.
+ * Fetch trending repos for a date with streak and new-entry data included.
+ * Wraps `getTrendingRepos` + `calculateStreaks` + `detectNewEntries` into a single call.
+ * Streak and new-entry errors are non-fatal — repos are returned without
+ * enrichment if either query fails.
  */
 export async function getTrendingReposWithStreaks(
 	db: D1Database,
@@ -131,6 +133,11 @@ export async function getTrendingReposWithStreaks(
 		await calculateStreaks(db, date, repos);
 	} catch {
 		// Non-fatal: repos are still valid without streaks
+	}
+	try {
+		await detectNewEntries(db, date, repos);
+	} catch {
+		// Non-fatal: repos are still valid without new-entry flags
 	}
 	return repos;
 }
@@ -192,6 +199,51 @@ export async function calculateStreaks(
 }
 
 /**
+ * Detect first-time trending repos for the given date.
+ * Mutates each repo in-place by setting the `is_new_entry` property.
+ *
+ * A repo is a "new entry" if it has no prior appearance in the archive
+ * (i.e., no row exists with `trending_date < date` for that repo).
+ *
+ * Uses NOT EXISTS with short-circuit evaluation — for repos with prior
+ * appearances the subquery stops at the first match, avoiding a full
+ * history scan. Only returns repos that ARE new entries; all others
+ * are set to `false`.
+ */
+export async function detectNewEntries(
+	db: D1Database,
+	date: string,
+	repos: TrendingRepo[],
+): Promise<void> {
+	if (repos.length === 0) return;
+
+	const { results } = await db
+		.prepare(
+			`SELECT repo_owner, repo_name
+			   FROM trending_repos
+			  WHERE trending_date = ?
+			    AND NOT EXISTS (
+			        SELECT 1 FROM trending_repos h
+			         WHERE h.repo_owner = trending_repos.repo_owner
+			           AND h.repo_name = trending_repos.repo_name
+			           AND h.trending_date < ?
+			    )`,
+		)
+		.bind(date, date)
+		.all<{ repo_owner: string; repo_name: string }>();
+
+	const newEntries = new Set<string>();
+	for (const row of results) {
+		newEntries.add(`${row.repo_owner}/${row.repo_name}`);
+	}
+
+	for (const repo of repos) {
+		const key = `${repo.repo_owner}/${repo.repo_name}`;
+		repo.is_new_entry = newEntries.has(key);
+	}
+}
+
+/**
  * Count consecutive days backward from `targetDate` in a descending-sorted date array.
  * Expects `sortedDatesDesc` to contain YYYY-MM-DD strings in descending order,
  * starting from `targetDate`.
@@ -212,14 +264,14 @@ function consecutiveStreak(sortedDatesDesc: string[], targetDate: string): numbe
 
 /** Return the YYYY-MM-DD string for the day before `dateStr`. */
 function previousDay(dateStr: string): string {
-	const d = new Date(dateStr + "T00:00:00Z");
+	const d = new Date(`${dateStr}T00:00:00Z`);
 	d.setUTCDate(d.getUTCDate() - 1);
 	return d.toISOString().slice(0, 10);
 }
 
 /** Return the YYYY-MM-DD string for `n` days before `dateStr`. */
 function daysAgo(dateStr: string, n: number): string {
-	const d = new Date(dateStr + "T00:00:00Z");
+	const d = new Date(`${dateStr}T00:00:00Z`);
 	d.setUTCDate(d.getUTCDate() - n);
 	return d.toISOString().slice(0, 10);
 }
