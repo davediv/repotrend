@@ -14,8 +14,14 @@ import {
 	todayUTC,
 } from "../../../lib/dates";
 import { logError } from "../../../lib/log";
-import { getWeeklyTrendingRepos, type WeeklyTrendingRepo } from "../../../lib/trending";
+import {
+	getWeeklyLanguageDistribution,
+	getWeeklyTrendingRepos,
+	type LanguageDistribution,
+	type WeeklyTrendingRepo,
+} from "../../../lib/trending";
 import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
+import LanguageChart from "../../../components/LanguageChart.astro";
 
 export const prerender = false;
 
@@ -37,6 +43,7 @@ const weekEnd = getSundayOfWeek(monday);
 const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
 let repos: WeeklyTrendingRepo[] = [];
+let languages: LanguageDistribution[] = [];
 let partial = false;
 let hasError = false;
 try {
@@ -46,6 +53,11 @@ try {
 	const today = todayUTC();
 	const weekNotFinished = weekEnd > today;
 	partial = weekNotFinished || result.daysWithData < 7;
+	try {
+		languages = await getWeeklyLanguageDistribution(db, monday, weekEnd);
+	} catch {
+		// Non-fatal: page renders without language chart
+	}
 } catch (error) {
 	hasError = true;
 	logError("trending_week_ssr_error", { date })(error);
@@ -61,5 +73,6 @@ try {
 		<ViewToggle activeView="weekly" currentDate={date} />
 		<SortDropdown activeSort={sort} viewMode="weekly" />
 	</Toolbar>
+	<LanguageChart languages={languages} />
 	{hasError ? <ErrorFallback /> : <RepoCardList viewMode="weekly" repos={repos} weekLabel={weekLabel} weekStart={monday} partial={partial} />}
 </Layout>

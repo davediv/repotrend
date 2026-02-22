@@ -1,0 +1,131 @@
+---
+import { UNKNOWN_LANGUAGE_COLOR, type LanguageDistribution } from "../lib/trending";
+import { sanitizeHexColor } from "../lib/format";
+
+interface Props {
+	/** Language distribution data sorted by count descending. */
+	languages: LanguageDistribution[];
+}
+
+const { languages } = Astro.props;
+
+// --- SVG donut geometry ---
+const SIZE = 160;
+const CENTER = SIZE / 2;
+const OUTER_RADIUS = 68;
+const STROKE_WIDTH = 28;
+const RADIUS = OUTER_RADIUS - STROKE_WIDTH / 2; // center of the stroke ring
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+/** Maximum number of languages to show individually; the rest are grouped as "Other". */
+const MAX_LEGEND_ITEMS = 8;
+
+/** Map a LanguageDistribution to a chart-ready item with a safe hex color. */
+const toChartItem = (l: LanguageDistribution) => ({
+	language: l.language,
+	color: sanitizeHexColor(l.color) ?? UNKNOWN_LANGUAGE_COLOR,
+	percentage: l.percentage,
+	count: l.count,
+});
+
+// Group small languages into "Other"
+let chartData: ReturnType<typeof toChartItem>[];
+if (languages.length <= MAX_LEGEND_ITEMS) {
+	chartData = languages.map(toChartItem);
+} else {
+	const top = languages.slice(0, MAX_LEGEND_ITEMS - 1);
+	const rest = languages.slice(MAX_LEGEND_ITEMS - 1);
+	chartData = [
+		...top.map(toChartItem),
+		{
+			language: `Other (${rest.length})`,
+			color: UNKNOWN_LANGUAGE_COLOR,
+			percentage: Math.round(rest.reduce((sum, l) => sum + l.percentage, 0) * 10) / 10,
+			count: rest.reduce((sum, l) => sum + l.count, 0),
+		},
+	];
+}
+
+// Calculate stroke-dasharray segments
+const segments: {
+	language: string;
+	color: string;
+	percentage: number;
+	count: number;
+	dashArray: string;
+	dashOffset: number;
+}[] = [];
+
+let offset = 0;
+for (const item of chartData) {
+	const segmentLength = (item.percentage / 100) * CIRCUMFERENCE;
+	segments.push({
+		...item,
+		dashArray: `${segmentLength} ${CIRCUMFERENCE - segmentLength}`,
+		// Offset from the top (12 o'clock). stroke-dashoffset shifts the dash start;
+		// a positive value rotates counter-clockwise, so we negate the accumulated offset.
+		dashOffset: CIRCUMFERENCE / 4 - offset,
+	});
+	offset += segmentLength;
+}
+
+const totalRepos = languages.reduce((sum, l) => sum + l.count, 0);
+const hasData = languages.length > 0;
+---
+
+{hasData && (
+	<section class="language-chart" aria-label="Language distribution chart">
+		<div class="language-chart-inner">
+			<div class="donut-wrapper">
+				<svg
+					class="donut"
+					width={SIZE}
+					height={SIZE}
+					viewBox={`0 0 ${SIZE} ${SIZE}`}
+					role="img"
+					aria-label={`Language distribution: ${chartData.map((s) => `${s.language} ${s.percentage}%`).join(", ")}`}
+				>
+					{/* Background ring */}
+					<circle
+						cx={CENTER}
+						cy={CENTER}
+						r={RADIUS}
+						fill="none"
+						stroke="var(--color-border)"
+						stroke-width={STROKE_WIDTH}
+						opacity="0.3"
+					/>
+					{/* Data segments */}
+					{segments.map((seg) => (
+						<circle
+							cx={CENTER}
+							cy={CENTER}
+							r={RADIUS}
+							fill="none"
+							stroke={seg.color}
+							stroke-width={STROKE_WIDTH}
+							stroke-dasharray={seg.dashArray}
+							stroke-dashoffset={seg.dashOffset}
+							stroke-linecap="butt"
+						>
+							<title>{seg.language}: {seg.count} {seg.count === 1 ? "repo" : "repos"} ({seg.percentage}%)</title>
+						</circle>
+					))}
+				</svg>
+				<div class="donut-center">
+					<span class="donut-total">{totalRepos}</span>
+					<span class="donut-label">{totalRepos === 1 ? "repo" : "repos"}</span>
+				</div>
+			</div>
+			<ul class="language-legend" aria-label="Languages">
+				{segments.map((seg) => (
+					<li class="legend-item">
+						<span class="legend-dot" style={seg.color ? `background-color: ${seg.color}` : undefined} aria-hidden="true" />
+						<span class="legend-name">{seg.language}</span>
+						<span class="legend-pct">{seg.percentage}%</span>
+					</li>
+				))}
+			</ul>
+		</div>
+	</section>
+)}
