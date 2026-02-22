@@ -4,10 +4,10 @@
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "astro dev",
-		"build": "astro build",
-		"preview": "astro build && wrangler dev",
+		"build": "astro build && node scripts/inject-scheduled.mjs",
+		"preview": "astro build && node scripts/inject-scheduled.mjs && wrangler dev",
 		"astro": "astro",
-		"deploy": "astro build && wrangler deploy",
+		"deploy": "astro build && node scripts/inject-scheduled.mjs && wrangler deploy",
 		"cf-typegen": "wrangler types",
 		"db:seed": "wrangler d1 execute repotrend-db --local --file=./scripts/seed.sql"
 	},
