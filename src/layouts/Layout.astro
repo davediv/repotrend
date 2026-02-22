@@ -4,12 +4,16 @@ import "../styles/repo-card.css";
 interface Props {
 	title?: string;
 	description?: string;
+	ogType?: string;
 }
 
 const {
 	title = "RepoTrend — GitHub Trending Archive",
 	description = "Browse the historical archive of GitHub trending repositories, daily and weekly.",
+	ogType = "website",
 } = Astro.props;
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 ---
 
 <!doctype html>
@@ -21,6 +25,21 @@ const {
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
+		<link rel="canonical" href={canonicalUrl.href} />
+
+		<!-- Open Graph -->
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={canonicalUrl.href} />
+		<meta property="og:type" content={ogType} />
+		<meta property="og:site_name" content="RepoTrend" />
+		<meta property="og:locale" content="en_US" />
+
+		<!-- Twitter Card -->
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+
 		<title>{title}</title>
 		<script is:inline>
 			(function () {

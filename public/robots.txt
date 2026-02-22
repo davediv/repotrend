@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /trending/
+Allow: /trending/week/
+
+Disallow: /api/
+
+Sitemap: https://repotrend.dev/sitemap.xml
