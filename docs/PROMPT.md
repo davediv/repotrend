@@ -6,7 +6,7 @@
    - No type, format, lint errors.
    - No errors.
 4. Update `docs/TODO.md` to mark the task as completed (checked).
-5. Git commit (use `/do:commit` custom command)
-6. Calculate the total number of tasks and the number of unfinished (unchecked) tasks, then display the overall progress and send it using plugin/command `/telegram-notify:send repotrend ✅ Progress: XX/XXX tasks (XX%)`.
+5. Git commit (use `/do:commit` custom command - DO NOT SKIP THIS)
+6. Calculate the total number of tasks and the number of unfinished (unchecked) tasks, then display the overall progress and send it using plugin/command `/telegram-notify:send repotrend ✅ Progress: XX/XXX tasks (XX%)`. DO NOT SKIP THIS.
 
 If no unchecked tasks remain, output: <promise>COMPLETE</promise>

@@ -80,7 +80,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/lib/scraper/fetcher.ts` — `fetchTrendingPage()` with 30s AbortController timeout, realistic UA, and `randomDelay()` jitter utility
 
-- [ ] **FEAT-P0-002**: Implement HTML parser to extract trending repo data
+- [x] **FEAT-P0-002**: Implement HTML parser to extract trending repo data
   - **Success Criteria**:
     - Parses the GitHub trending page HTML and extracts all 25 repos
     - Each parsed repo includes: `repo_owner`, `repo_name`, `description`, `language`, `language_color`, `total_stars`, `forks`, `stars_today`
@@ -89,6 +89,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Returns typed array of repo objects
     - Throws descriptive error if page structure is unrecognizable
   - **Dependencies**: FEAT-P0-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/scraper/parser.ts` — `parseTrendingPage()` using `node-html-parser`, extracts all 25 repos via `article.Box-row` selector with `parseFormattedNumber()` utility for comma/k-abbreviated numbers
 
 - [ ] **FEAT-P0-003**: Implement D1 persistence layer for scraped data
   - **Success Criteria**:
