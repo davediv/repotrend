@@ -248,7 +248,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/components/RepoCard.astro` — Astro component with rank badge, GitHub-linked repo name, conditional description/language, star/fork/stars-today metadata with SVG icons. `src/lib/format.ts` — shared `formatNumber()` and `sanitizeHexColor()` utilities. Global `.sr-only` class added to Layout.astro for accessibility.
 
-- [ ] **UI-P1-005**: Implement repo card list with loading and empty states
+- [x] **UI-P1-005**: Implement repo card list with loading and empty states
   - **Success Criteria**:
     - Card list renders 25 repo cards in a vertical stack for a given date
     - Loading state shows skeleton placeholder cards while data is fetching
@@ -262,6 +262,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Verify rank numbers appear on each card (1 through 25)
     - Check Console for zero errors
   - **Dependencies**: UI-P1-004, API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/components/RepoCardList.astro` — Client-side fetching from `/api/trending/{date}` with skeleton loading placeholders (5 pulsing cards), empty state with document icon, error state with retry button. Cards rendered via `buildRepoCardHTML()` with XSS-safe `escapeHTML()`, rank badges 1–25, `role="feed"` for accessibility. Integrated into `/`, `/trending/[date]`, and `/trending/week/[date]` pages. Also fixed `sanitizeHexColor` regex to reject invalid 4/5-char hex values.
 
 ### Dark Mode
 

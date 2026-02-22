@@ -21,14 +21,14 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "repotrend-db",
-			"database_id": "REPLACE_WITH_D1_DATABASE_ID"
+			"database_name": "repotrend",
+			"database_id": "3827f40b-0dca-42c4-ada6-93c2757464ca"
 		}
 	],
 	"kv_namespaces": [
 		{
 			"binding": "CACHE",
-			"id": "REPLACE_WITH_KV_NAMESPACE_ID"
+			"id": "d4d74d193a954cdbbae0799155ab0e3a"
 		}
 	],
 	"triggers": {

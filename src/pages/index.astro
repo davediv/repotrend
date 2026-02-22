@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import DatePicker from "../components/DatePicker.astro";
 import Toolbar from "../components/Toolbar.astro";
 import ViewToggle from "../components/ViewToggle.astro";
+import RepoCardList from "../components/RepoCardList.astro";
 import { todayUTC } from "../lib/dates";
 
 const today = todayUTC();
@@ -13,4 +14,5 @@ const today = todayUTC();
 		<DatePicker />
 		<ViewToggle activeView="daily" currentDate={today} />
 	</Toolbar>
+	<RepoCardList date={today} />
 </Layout>

@@ -3,6 +3,7 @@ import Layout from "../../../layouts/Layout.astro";
 import DatePicker from "../../../components/DatePicker.astro";
 import Toolbar from "../../../components/Toolbar.astro";
 import ViewToggle from "../../../components/ViewToggle.astro";
+import RepoCardList from "../../../components/RepoCardList.astro";
 import { formatWeekRange, getMondayOfWeek, isValidDate } from "../../../lib/dates";
 
 export const prerender = false;
@@ -28,4 +29,5 @@ const weekLabel = formatWeekRange(date);
 		<DatePicker selectedDate={date} viewMode="weekly" />
 		<ViewToggle activeView="weekly" currentDate={date} />
 	</Toolbar>
+	<RepoCardList date={date} viewMode="weekly" />
 </Layout>
