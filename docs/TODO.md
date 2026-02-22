@@ -308,7 +308,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Pages & Routing
 
-- [ ] **UI-P1-008**: Implement homepage route (`/`) that displays today's trending data
+- [x] **UI-P1-008**: Implement homepage route (`/`) that displays today's trending data
   - **Success Criteria**:
     - `/` route renders the Layout with date picker (set to today) and card list
     - On page load, fetches today's trending data from API
@@ -322,6 +322,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Check Network tab for API requests
     - Verify page loads within acceptable time
   - **Dependencies**: UI-P1-001, UI-P1-002, UI-P1-005, API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/index.astro` — SSR homepage with D1 query to find most recent available date (fallback from today), passes `effectiveDate` to DatePicker/ViewToggle/RepoCardList components. Uses Layout default title "RepoTrend — GitHub Trending Archive" and SEO meta description. Structured JSON error logging on D1 failure with graceful fallback to today's date.
 
 - [ ] **UI-P1-009**: Implement date-specific route (`/trending/[date]`) for historical browsing
   - **Success Criteria**:
