@@ -692,13 +692,15 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Compare Two Dates
 
-- [ ] **API-P4-002**: Implement API endpoint for comparing two dates
+- [x] **API-P4-002**: Implement API endpoint for comparing two dates
   - **Success Criteria**:
     - `GET /api/compare?date1=YYYY-MM-DD&date2=YYYY-MM-DD` returns repos for both dates
     - Response flags repos that appear on both dates, only date1, or only date2
     - Response format: `{ date1_repos: [...], date2_repos: [...], common: [...], only_date1: [...], only_date2: [...] }`
     - Returns 400 if either date is invalid or missing
   - **Dependencies**: API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/api/compare.ts` — API route accepting `?date1=` and `?date2=` query parameters with YYYY-MM-DD validation (rejects invalid, missing, or identical dates with 400). Reuses `getTrendingRepos()` from `src/lib/trending.ts` for DRY D1 queries via `Promise.all`. Set-based comparison categorizes repos into `common` (full `TrendingRepo[]` objects), `only_date1`, and `only_date2`. Smart `Cache-Control` (immutable for historical pairs, 5min for today). Structured JSON logging with counts.
 
 - [ ] **UI-P4-003**: Implement side-by-side date comparison view
   - **Success Criteria**:
