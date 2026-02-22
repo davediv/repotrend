@@ -48,50 +48,49 @@
 }
 
 .appearances-badge,
-.streak-badge {
+.streak-badge,
+.new-entry-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	flex-shrink: 0;
 	margin-inline-start: auto;
+	padding: 0.125rem 0.5rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	border-radius: 1rem;
+	white-space: nowrap;
 }
 
-.appearances-badge + .streak-badge {
+.appearances-badge + .streak-badge,
+.appearances-badge + .new-entry-badge,
+.streak-badge + .new-entry-badge {
 	margin-inline-start: 0;
 }
 
-.appearances-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.25rem;
+.appearances-badge svg,
+.streak-badge svg,
+.new-entry-badge svg {
 	flex-shrink: 0;
-	padding: 0.125rem 0.5rem;
-	font-size: 0.75rem;
-	font-weight: 500;
+}
+
+.appearances-badge {
 	color: var(--color-accent);
 	background-color: var(--color-bg-secondary);
 	border: 1px solid var(--color-border);
-	border-radius: 1rem;
-	white-space: nowrap;
-}
-
-.appearances-badge svg {
-	flex-shrink: 0;
 }
 
 .streak-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.25rem;
-	flex-shrink: 0;
-	padding: 0.125rem 0.5rem;
-	font-size: 0.75rem;
-	font-weight: 500;
 	color: var(--color-streak);
 	background-color: var(--color-streak-bg);
 	border: 1px solid var(--color-streak-border);
-	border-radius: 1rem;
-	white-space: nowrap;
 }
 
-.streak-badge svg {
-	flex-shrink: 0;
+.new-entry-badge {
+	font-weight: 600;
+	color: var(--color-new-entry);
+	background-color: var(--color-new-entry-bg);
+	border: 1px solid var(--color-new-entry-border);
 }
 
 .repo-name {

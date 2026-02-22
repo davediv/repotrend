@@ -53,6 +53,7 @@ const weekDatetime = weekStart ? `${weekStart}/${getSundayOfWeek(weekStart)}` : 
 					viewMode={viewMode}
 					appearances={isWeekly ? (repo as WeeklyTrendingRepo).appearances : undefined}
 					streak={!isWeekly ? (repo as TrendingRepo).streak : undefined}
+					isNewEntry={!isWeekly ? (repo as TrendingRepo).is_new_entry : undefined}
 				/>
 			</li>
 		))}
