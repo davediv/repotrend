@@ -639,7 +639,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Language Breakdown Chart
 
-- [ ] **API-P4-001**: Implement API endpoint for language distribution data
+- [x] **API-P4-001**: Implement API endpoint for language distribution data
   - **Success Criteria**:
     - `GET /api/languages/[date]` returns language breakdown for that date
     - Response format: `[{ language, color, count, percentage }]` sorted by count descending
@@ -647,6 +647,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Percentages sum to 100%
     - Works for both single dates and week ranges (`/api/languages/week/[date]`)
   - **Dependencies**: DB-P0-001, API-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/trending.ts` — Added `LanguageDistribution` interface, `getLanguageDistribution()` and `getWeeklyLanguageDistribution()` query functions with parameterized SQL (GROUP BY language name, MAX for color), `applyPercentages()` using largest-remainder method in integer tenths for exact 100% sum. `src/pages/api/languages/[date].ts` — Daily endpoint with KV caching (`languages:{date}` key), structured cache hit/miss logging, 1h TTL for today. `src/pages/api/languages/week/[date].ts` — Weekly endpoint with Monday normalization, KV caching (`languages:week:{monday}` key), 1h TTL for current week.
 
 - [ ] **UI-P4-001**: Implement language breakdown donut/bar chart
   - **Success Criteria**:
