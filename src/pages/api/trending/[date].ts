@@ -1,6 +1,12 @@
 import type { APIRoute } from "astro";
 import { isValidDate, todayUTC } from "../../../lib/dates";
-import { calculateStreaks, detectNewEntries, type TrendingRepo } from "../../../lib/trending";
+import { logError } from "../../../lib/log";
+import {
+	calculateStreaks,
+	detectNewEntries,
+	fetchStarHistory,
+	type TrendingRepo,
+} from "../../../lib/trending";
 
 export const prerender = false;
 
@@ -78,7 +84,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		});
 	}
 
-	// 3–4. Enrich results with streak and new-entry data.
+	// 3–5. Enrich results with streak, new-entry, and star-history data.
 	// NOTE: This mirrors getTrendingReposWithStreaks() — keep in sync.
 	// The API endpoint uses its own query (for trending_date/scraped_at columns)
 	// so cannot reuse the wrapper directly.
@@ -87,16 +93,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	try {
 		await calculateStreaks(db, date, results);
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		console.error(
-			JSON.stringify({
-				level: "error",
-				event: "streak_calc_error",
-				timestamp: new Date().toISOString(),
-				date,
-				error: message,
-			}),
-		);
+		logError("streak_calc_error", { date })(error);
 		// Non-fatal: results are still valid without streaks
 	}
 
@@ -104,36 +101,25 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	try {
 		await detectNewEntries(db, date, results);
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		console.error(
-			JSON.stringify({
-				level: "error",
-				event: "new_entry_detect_error",
-				timestamp: new Date().toISOString(),
-				date,
-				error: message,
-			}),
-		);
+		logError("new_entry_detect_error", { date })(error);
 		// Non-fatal: results are still valid without new-entry flags
 	}
 
-	// 5. Populate KV cache (skip empty results to allow future backfills)
+	// 5. Attach star history for sparkline rendering
+	try {
+		await fetchStarHistory(db, date, results);
+	} catch (error) {
+		logError("star_history_error", { date })(error);
+		// Non-fatal: results are still valid without star history
+	}
+
+	// 6. Populate KV cache (skip empty results to allow future backfills)
 	const json = JSON.stringify(results);
 	if (results.length > 0) {
 		try {
 			await kv.put(cacheKey, json, isToday ? { expirationTtl: TODAY_TTL_SECONDS } : undefined);
 		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			console.error(
-				JSON.stringify({
-					level: "error",
-					event: "cache_put_error",
-					timestamp: new Date().toISOString(),
-					date,
-					cacheKey,
-					error: message,
-				}),
-			);
+			logError("cache_put_error", { date, cacheKey })(error);
 		}
 	}
 
