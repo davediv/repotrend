@@ -558,7 +558,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/pages/api/search.ts` — API route accepting `?q=` query parameter with min 2 / max 100 character validation. D1 LIKE queries across `repo_owner`, `repo_name`, and `description` with proper LIKE metacharacter escaping (`%`, `_`, `\`). Results grouped by unique repo with array of trending dates, ordered by relevance tiers (exact match → starts-with → name contains → description-only), then by recency and stars. SQL LIMIT 750 cap to prevent resource exhaustion. Structured JSON error logging. Response includes `total` count, 60s cache TTL.
 
-- [ ] **UI-P3-003**: Implement search input in header with results page
+- [x] **UI-P3-003**: Implement search input in header with results page
   - **Success Criteria**:
     - Search input field in the header with magnifying glass icon
     - Input has placeholder text "Search trending repos..."
@@ -577,6 +577,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Check Network tab for debounced API calls (not per-keystroke)
     - Tab to search input and verify keyboard interaction works
   - **Dependencies**: API-P3-003, UI-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/layouts/Layout.astro` — Search form in header with magnifying glass icon, placeholder, `role="search"`, `aria-label`, GET form submission to `/search`. `src/pages/search.astro` — Full search results page with 300ms debounced input handler, `AbortController` for in-flight cancellation, loading spinner, empty state, error state (with `role="alert"`), result cards showing repo name/description/language/stars/forks and trending date pills. `src/pages/api/search.ts` — Search API endpoint (covered by API-P3-003). `src/lib/search-types.ts` — `SearchResult` and `SearchResponse` interfaces. All dynamic HTML rendered via `escapeHTML()` for XSS safety.
 
 ### Star Delta Sparkline
 

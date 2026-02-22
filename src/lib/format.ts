@@ -8,3 +8,13 @@ export function sanitizeHexColor(color: string | null): string | null {
 	if (!color) return null;
 	return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color) ? color : null;
 }
+
+/** Escape HTML special characters to prevent XSS in dynamically rendered HTML. */
+export function escapeHTML(str: string): string {
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
