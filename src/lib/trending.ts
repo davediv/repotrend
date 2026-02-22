@@ -1,3 +1,9 @@
+/** One data point in a repo's star history. */
+export interface StarHistoryPoint {
+	date: string;
+	stars_today: number;
+}
+
 /** Shape of a trending repo row from D1 (display-relevant fields). */
 export interface TrendingRepo {
 	repo_owner: string;
@@ -12,6 +18,11 @@ export interface TrendingRepo {
 	streak?: number;
 	/** Whether this is the repo's first appearance in the archive. */
 	is_new_entry?: boolean;
+	/**
+	 * Chronologically-sorted history of daily star gains for this repo.
+	 * Only present when the repo has 2+ days of data in the archive.
+	 */
+	star_history?: StarHistoryPoint[];
 }
 
 /** Shape of a weekly-aggregated trending repo. */
@@ -118,11 +129,13 @@ export async function getWeeklyTrendingRepos(
 /** Max number of days to look back when calculating streaks. */
 const STREAK_LOOKBACK_DAYS = 60;
 
+/** Max number of days of star history to include for sparkline charts. */
+const STAR_HISTORY_LOOKBACK_DAYS = 365;
+
 /**
- * Fetch trending repos for a date with streak and new-entry data included.
- * Wraps `getTrendingRepos` + `calculateStreaks` + `detectNewEntries` into a single call.
- * Streak and new-entry errors are non-fatal — repos are returned without
- * enrichment if either query fails.
+ * Fetch trending repos for a date with streak, new-entry, and star-history data included.
+ * Wraps `getTrendingRepos` + enrichment functions into a single call.
+ * All enrichment errors are non-fatal — repos are returned without enrichment on failure.
  */
 export async function getTrendingReposWithStreaks(
 	db: D1Database,
@@ -139,7 +152,68 @@ export async function getTrendingReposWithStreaks(
 	} catch {
 		// Non-fatal: repos are still valid without new-entry flags
 	}
+	try {
+		await fetchStarHistory(db, date, repos);
+	} catch {
+		// Non-fatal: repos are still valid without star history
+	}
 	return repos;
+}
+
+/**
+ * Fetch star-gain history (up to STAR_HISTORY_LOOKBACK_DAYS) for the given repos.
+ * Mutates each repo in-place by setting the `star_history` property.
+ *
+ * `star_history` is only set for repos with 2+ days of data; repos with a single
+ * appearance receive no `star_history` property.
+ *
+ * `date` identifies the repo set via an indexed JOIN (one bind vs. a dynamic IN-list
+ * for ~25 repos). History is bounded to STAR_HISTORY_LOOKBACK_DAYS to keep query
+ * cost and KV payload size predictable as the archive grows.
+ * Results are sorted chronologically (oldest first).
+ */
+export async function fetchStarHistory(
+	db: D1Database,
+	date: string,
+	repos: TrendingRepo[],
+): Promise<void> {
+	if (repos.length === 0) return;
+
+	const lookbackDate = daysAgo(date, STAR_HISTORY_LOOKBACK_DAYS);
+
+	const { results } = await db
+		.prepare(
+			`SELECT h.repo_owner, h.repo_name, h.trending_date AS date, h.stars_today
+			   FROM trending_repos h
+			  INNER JOIN trending_repos t
+			     ON h.repo_owner = t.repo_owner AND h.repo_name = t.repo_name
+			  WHERE t.trending_date = ?
+			    AND h.trending_date >= ?
+			  ORDER BY h.repo_owner, h.repo_name, h.trending_date ASC`,
+		)
+		.bind(date, lookbackDate)
+		.all<{ repo_owner: string; repo_name: string; date: string; stars_today: number }>();
+
+	// Group history points by repo key
+	const historyByRepo = new Map<string, StarHistoryPoint[]>();
+	for (const row of results) {
+		const key = `${row.repo_owner}/${row.repo_name}`;
+		let points = historyByRepo.get(key);
+		if (!points) {
+			points = [];
+			historyByRepo.set(key, points);
+		}
+		points.push({ date: row.date, stars_today: row.stars_today });
+	}
+
+	// Only attach history for repos with 2+ data points
+	for (const repo of repos) {
+		const key = `${repo.repo_owner}/${repo.repo_name}`;
+		const points = historyByRepo.get(key);
+		if (points && points.length >= 2) {
+			repo.star_history = points;
+		}
+	}
 }
 
 /**

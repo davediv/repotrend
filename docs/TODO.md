@@ -582,7 +582,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Star Delta Sparkline
 
-- [ ] **API-P3-004**: Implement API logic to return historical star deltas for repos
+- [x] **API-P3-004**: Implement API logic to return historical star deltas for repos
   - **Success Criteria**:
     - For each repo in a date response, include a `star_history` array of `{ date, stars_today }` objects
     - History includes all dates the repo appeared in the archive (not just consecutive)
@@ -590,6 +590,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Only returned for repos with 2+ days of data
     - Data sourced from existing `trending_repos` table (no additional storage needed)
   - **Dependencies**: API-P1-001, DB-P0-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/lib/trending.ts` — Added `StarHistoryPoint` interface and `fetchStarHistory()` using INNER JOIN with 365-day lookback window, groups by repo key, sets `star_history` only for repos with 2+ data points (oldest-first). Integrated into `getTrendingReposWithStreaks()` wrapper (SSR path) and `/api/trending/[date]` endpoint (API path) with non-fatal error handling. Also refactored API endpoint error logging to use shared `logError()` utility from `src/lib/log.ts`.
 
 - [ ] **UI-P3-004**: Implement sparkline chart on repository cards
   - **Success Criteria**:
