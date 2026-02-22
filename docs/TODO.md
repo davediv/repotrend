@@ -452,7 +452,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### SEO & Meta
 
-- [ ] **UI-P2-003**: Implement SEO-optimized meta tags and Open Graph data
+- [x] **UI-P2-003**: Implement SEO-optimized meta tags and Open Graph data
   - **Success Criteria**:
     - Each date page has a unique `<title>` (e.g., "GitHub Trending Repos — Feb 15, 2026 | RepoTrend")
     - Meta description is unique per page and includes the date
@@ -462,6 +462,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - `robots.txt` allows crawling of trending pages
     - Sitemap generated for all archived dates
   - **Dependencies**: UI-P1-008, UI-P1-009
+  - **Completed**: 2026-02-22
+  - **Implementation**: Added `site` config to `astro.config.mjs`. Enhanced `src/layouts/Layout.astro` with canonical URL (`<link rel="canonical">`), Open Graph tags (`og:title`, `og:description`, `og:url`, `og:type`, `og:site_name`, `og:locale`), and Twitter Card tags (`twitter:card`, `twitter:title`, `twitter:description`) — all derived from existing `title`/`description` props with `Astro.url`/`Astro.site` for canonical URLs. Added `public/robots.txt` allowing `/trending/` paths and disallowing `/api/`, with sitemap reference. Created `src/pages/sitemap.xml.ts` — dynamic SSR endpoint querying D1 for all archived dates, generating homepage + daily + weekly URLs with proper priorities/changefreq, XML escaping, and 1h cache.
 
 ### Error Handling
 
