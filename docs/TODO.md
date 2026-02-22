@@ -131,7 +131,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### API Endpoints
 
-- [ ] **API-P1-001**: Implement API endpoint to fetch trending repos by date
+- [x] **API-P1-001**: Implement API endpoint to fetch trending repos by date
   - **Success Criteria**:
     - `GET /api/trending/[date]` accepts a date string in `YYYY-MM-DD` format
     - Returns JSON array of repos for that date, ordered by `stars_today` descending
@@ -140,6 +140,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - D1 query uses the `trending_date` index for sub-100ms response
     - Response includes `Content-Type: application/json` header
   - **Dependencies**: DB-P0-001, FEAT-P0-003
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/api/trending/[date].ts` — Astro API route with YYYY-MM-DD validation (regex + semantic date check), D1 query using `trending_date` index with `ORDER BY stars_today DESC`, structured error handling for D1 failures
 
 - [ ] **API-P1-002**: Implement API endpoint to get available date range
   - **Success Criteria**:
