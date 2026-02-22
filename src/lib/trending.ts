@@ -99,6 +99,29 @@ function applyPercentages(
 	}));
 }
 
+/** Date with its associated repo count for calendar heatmap. */
+export interface DateRepoCount {
+	date: string;
+	count: number;
+}
+
+/**
+ * Query repo counts per date across the entire archive.
+ * Returns an array sorted chronologically (oldest first).
+ * Used by the calendar heatmap to shade cells by data density.
+ */
+export async function getDateRepoCounts(db: D1Database): Promise<DateRepoCount[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT trending_date AS date, COUNT(*) AS count
+			   FROM trending_repos
+			  GROUP BY trending_date
+			  ORDER BY trending_date ASC`,
+		)
+		.all<DateRepoCount>();
+	return results;
+}
+
 /** One data point in a repo's star history. */
 export interface StarHistoryPoint {
 	date: string;

@@ -670,7 +670,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Calendar Heatmap Navigation
 
-- [ ] **UI-P4-002**: Implement calendar heatmap component for archive navigation
+- [x] **UI-P4-002**: Implement calendar heatmap component for archive navigation
   - **Success Criteria**:
     - GitHub-style contribution heatmap showing months of archive data
     - Each day cell is shaded by number of repos captured (0 = empty, 25 = full)
@@ -687,6 +687,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Toggle dark mode and verify heatmap adapts
     - Tab through heatmap cells and verify keyboard navigation
   - **Dependencies**: API-P1-002, UI-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/components/CalendarHeatmap.astro` — GitHub-style SSR SVG-less calendar heatmap using CSS Grid (`grid-auto-flow: column` with 7-row template for Mon–Sun layout). `src/lib/trending.ts` — Added `getDateRepoCounts()` query (GROUP BY trending_date) and `DateRepoCount` interface. `src/lib/dates.ts` — Added shared `parseDate()` utility. 5-level green color scale (`--color-heatmap-empty/l1/l2/l3/l4`) matching GitHub's contribution graph palette for both light and dark themes. Day cells with data are `<a>` links to `/trending/{date}`, keyboard navigable via roving tabindex (ArrowUp/Down/Left/Right). Month labels auto-positioned via CSS Grid `grid-column`. Day-of-week labels (Mon/Wed/Fri) on left. Legend with "Less/More" scale. Responsive: smaller cells on mobile, DOW labels hidden. Integrated into all 3 pages (index, daily, weekly) with non-fatal error handling.
 
 ### Compare Two Dates
 
@@ -751,17 +753,6 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ## Phase 5: Infrastructure, Testing & Documentation
 
-### Analytics
-
-- [ ] **INFRA-P5-001**: Integrate privacy-friendly analytics
-  - **Success Criteria**:
-    - Cloudflare Web Analytics (or Plausible/Fathom) script added to the layout
-    - Tracks page views per date/week route
-    - Tracks search query usage (anonymized)
-    - Tracks dark mode toggle usage
-    - No PII collected or stored
-    - Analytics dashboard accessible to the team
-  - **Dependencies**: UI-P1-001
 
 ### Testing
 
@@ -808,107 +799,3 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Run E2E tests and verify all pass
     - Manually walk through each critical flow to verify against test expectations
   - **Dependencies**: UI-P1-008, UI-P1-009, UI-P2-001
-
-### Deployment
-
-- [ ] **DEPLOY-P5-001**: Configure production deployment pipeline
-  - **Success Criteria**:
-    - `npm run deploy` successfully builds Astro and deploys to Cloudflare Pages
-    - Worker with cron trigger deploys alongside the site
-    - D1 database migrations run before deployment
-    - Environment-specific configuration (production vs preview) works correctly
-    - Deployment produces no errors in Cloudflare dashboard
-  - **Dependencies**: INFRA-P0-001, INFRA-P0-002, INFRA-P0-003, DB-P0-001
-
-- [ ] **DEPLOY-P5-002**: Configure Cloudflare security settings
-  - **Success Criteria**:
-    - HTTPS enforced on all routes (automatic via Cloudflare)
-    - Cloudflare WAF basic rules enabled
-    - DDoS protection enabled (default on Cloudflare)
-    - Security headers set: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy`
-    - No mixed content warnings
-  - **Browser Validation** (chrome-devtools MCP):
-    - Navigate to production URL
-    - Check Security tab for valid SSL certificate
-    - Verify no mixed content warnings
-    - Check Network tab response headers for security headers
-  - **Dependencies**: DEPLOY-P5-001
-
-- [ ] **DEPLOY-P5-003**: Set up monitoring and alerting for scraper health
-  - **Success Criteria**:
-    - Alert triggers if no scrape succeeds for 24 hours
-    - Dashboard shows daily scrape success/failure history
-    - Scraper logs are queryable in Cloudflare dashboard
-    - Alert delivery method configured (email or webhook)
-  - **Dependencies**: FEAT-P0-005, DEPLOY-P5-001
-
-### Documentation
-
-- [ ] **DOC-P5-001**: Write project README with setup and deployment instructions
-  - **Success Criteria**:
-    - README covers: project overview, tech stack, local development setup, deployment steps
-    - Includes prerequisites (Node.js, Wrangler, Cloudflare account)
-    - Local development workflow documented (`npm run dev`, D1 local setup)
-    - Environment variable requirements documented
-    - Contributing guidelines included
-  - **Dependencies**: DEPLOY-P5-001
-
-- [ ] **DOC-P5-002**: Document API endpoints with request/response examples
-  - **Success Criteria**:
-    - All API endpoints documented with: method, path, parameters, request body, response schema, example response
-    - Error responses documented
-    - Can be maintained in a `docs/API.md` file or inline in README
-  - **Dependencies**: API-P1-001, API-P1-002, API-P2-001, API-P3-003
-
-- [ ] **DOC-P5-003**: Create FAQ page content for the site
-  - **Success Criteria**:
-    - FAQ covers: what is RepoTrend, data sources, update frequency, data scope (English only), how to report issues
-    - Content is concise and developer-friendly in tone
-    - Can be a static Astro page at `/faq`
-  - **Dependencies**: UI-P1-001
-
----
-
-## Backlog (Future Phases)
-
-### Future Enhancements
-- [ ] **FEAT-P6-001**: Support non-English trending pages (i18n data expansion)
-  - **Success Criteria**:
-    - Scraper can be configured with multiple `spoken_language_code` values
-    - UI allows filtering by spoken language
-  - **Dependencies**: FEAT-P0-001, UI-P1-002
-
-- [ ] **FEAT-P6-002**: Implement Atom/RSS feed for daily trending updates
-  - **Success Criteria**:
-    - `/feed.xml` returns valid Atom feed with latest trending repos
-    - Feed updates daily with the newest scraped data
-    - Feed validates against Atom specification
-  - **Dependencies**: API-P1-001
-
-- [ ] **FEAT-P6-003**: Implement "Year in Review" / "Month in Review" data summary page
-  - **Success Criteria**:
-    - Page shows aggregate stats: most frequently trending repos, language trends, newcomers
-    - Content is shareable and SEO-optimized for virality
-  - **Dependencies**: DB-P0-001, UI-P1-001
-
-- [ ] **FEAT-P6-004**: Add Open Graph image generation for social sharing
-  - **Success Criteria**:
-    - Each date page generates a dynamic OG image showing top 3 trending repos
-    - Image is served at `/og/YYYY-MM-DD.png`
-    - Image renders correctly in Twitter/X, LinkedIn, Slack previews
-  - **Dependencies**: UI-P2-003
-
----
-
-## Summary
-- **Total Tasks**: 62
-- **Phase 0 (Foundation)**: 10 tasks (5 critical, 3 high, 2 medium)
-- **Phase 1 (Core UI)**: 14 tasks (6 critical, 8 high)
-- **Phase 2 (Weekly & Polish)**: 4 tasks (3 high, 1 medium)
-- **Phase 3 (P1 Features)**: 11 tasks (all high)
-- **Phase 4 (P2 Features)**: 7 tasks (all medium)
-- **Phase 5 (Infra/Test/Deploy/Docs)**: 12 tasks (4 high, 7 medium, 1 low)
-- **Backlog**: 4 tasks (all low)
-- **Critical Path**: `INFRA-P0-001 → DB-P0-001 → FEAT-P0-003 → FEAT-P0-004 → API-P1-001 → UI-P1-004 → UI-P1-005 → UI-P1-008 → UI-P1-009 → DEPLOY-P5-001`
-- **Key External Dependencies**: GitHub trending page HTML structure stability, Cloudflare D1 performance at scale
-- **Key Decisions Needed**: Scrape frequency (once vs twice daily), weekly ranking algorithm, analytics tool selection
