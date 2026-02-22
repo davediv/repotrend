@@ -746,7 +746,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Scrape Retry Logic
 
-- [ ] **FEAT-P4-001**: Implement scraper retry logic for failed scrapes
+- [x] **FEAT-P4-001**: Implement scraper retry logic for failed scrapes
   - **Success Criteria**:
     - On scrape failure, the next scheduled cron run detects the gap and retries
     - Retry checks if current date already has data; if not, attempts a fresh scrape
@@ -754,6 +754,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Failed retries are logged with attempt count and error details
     - Successful retry after initial failure is logged as a recovered scrape
   - **Dependencies**: FEAT-P0-004, FEAT-P0-005
+  - **Completed**: 2026-02-23
+  - **Implementation**: `src/lib/scraper/retry.ts` — Retry-aware wrapper (`runScrapeWithRetry`) around the scrape pipeline using KV-backed attempt counting (`scrape_retry:{date}` keys with 48h TTL). Checks D1 for existing data before scraping (idempotent). MAX_RETRIES=3 with confirmed gap logging on exhaustion. Recovered scrapes logged distinctly. `src/pages/api/cron.ts` — Updated to use retry wrapper, differentiates benign skips (200) from gap confirmations (500). `src/lib/log.ts` — Added `logWarn` for operational events. Cron schedule changed to `0 6,12,18 * * *` (3x/day) since GitHub trending has no historical API — retries only work within the same UTC day.
 
 ---
 

@@ -1,3 +1,5 @@
+import { todayUTC } from "../dates";
+import { logError, logInfo } from "../log";
 import { fetchTrendingPage, randomDelay } from "./fetcher";
 import { parseTrendingPage } from "./parser";
 import { persistRepos } from "./persistence";
@@ -19,21 +21,17 @@ export interface ScrapeResult {
  * Logs structured JSON at each stage for observability in Cloudflare dashboard.
  *
  * @param db - Cloudflare D1 database binding
+ * @param targetDate - Optional date override (YYYY-MM-DD). Defaults to today (UTC).
  * @returns Structured result with success/failure details and metrics
  */
-export async function runScrapePipeline(db: D1Database): Promise<ScrapeResult> {
+export async function runScrapePipeline(
+	db: D1Database,
+	targetDate?: string,
+): Promise<ScrapeResult> {
 	const start = Date.now();
-	const timestamp = new Date().toISOString();
-	const date = timestamp.split("T")[0];
+	const date = targetDate ?? todayUTC();
 
-	console.log(
-		JSON.stringify({
-			level: "info",
-			event: "scrape_start",
-			timestamp,
-			date,
-		}),
-	);
+	logInfo("scrape_start", { date });
 
 	try {
 		await randomDelay();
@@ -70,17 +68,7 @@ export async function runScrapePipeline(db: D1Database): Promise<ScrapeResult> {
 
 		const durationMs = Date.now() - start;
 
-		console.log(
-			JSON.stringify({
-				level: "info",
-				event: "scrape_success",
-				timestamp: new Date().toISOString(),
-				date,
-				repoCount: repos.length,
-				rowsWritten,
-				durationMs,
-			}),
-		);
+		logInfo("scrape_success", { date, repoCount: repos.length, rowsWritten, durationMs });
 
 		return {
 			success: true,
@@ -95,17 +83,7 @@ export async function runScrapePipeline(db: D1Database): Promise<ScrapeResult> {
 		const errorType: ScrapeErrorType =
 			(error as { _scrapeErrorType?: ScrapeErrorType })._scrapeErrorType ?? "unknown_error";
 
-		console.error(
-			JSON.stringify({
-				level: "error",
-				event: "scrape_failure",
-				timestamp: new Date().toISOString(),
-				date,
-				durationMs,
-				errorType,
-				error: message,
-			}),
-		);
+		logError("scrape_failure", { date, durationMs, errorType })(new Error(message));
 
 		return {
 			success: false,
