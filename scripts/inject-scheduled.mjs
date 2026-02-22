@@ -33,7 +33,9 @@ const _scheduledWorker = {
     console.log(JSON.stringify({ level: "info", event: "cron_triggered", timestamp: new Date().toISOString(), scheduledTime: controller.scheduledTime }));
     try {
       const response = await _scheduledWorker.fetch(
-        new Request("http://trigger.internal/api/cron"),
+        new Request("http://trigger.internal/api/cron", {
+          headers: { "X-Cron-Source": "scheduled" },
+        }),
         env,
         ctx,
       );
