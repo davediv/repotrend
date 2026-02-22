@@ -35,3 +35,6 @@ ralph.sh
 
 # docs
 docs/
+
+# test coverage reports
+coverage/

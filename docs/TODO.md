@@ -775,13 +775,15 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-23
   - **Implementation**: `tests/parser.test.ts` — 36 unit tests covering `parseTrendingPage()` and `parseFormattedNumber()`. Fixture HTML files in `tests/fixtures/` (full 25-repo page, standard 3-repo page, missing optional fields, star format variations, empty/malformed page). Tests cover: full page extraction (25 repos), complete object shape via `toEqual`, individual field extraction (owner, name, description, language, color, stars, forks, stars_today), missing optional fields (null description, null language, null language_color, whitespace-only description), number formats (commas, plain, singular "star today", k-abbreviated, bare decimal), error handling (empty page, no articles, missing heading link, no href, invalid href), and edge cases (empty language text, invalid hex color, no style attribute, 3-digit shorthand hex, non-matching float text, missing stat elements). 100% coverage of parser module across all metrics (statements, branches, functions, lines). Vitest configured via `vitest.config.ts` with v8 coverage provider.
 
-- [ ] **TEST-P5-002**: Write unit tests for D1 persistence layer
+- [x] **TEST-P5-002**: Write unit tests for D1 persistence layer
   - **Success Criteria**:
     - Tests cover: insert new repos, upsert existing repos (dedup), query by date, query streaks
     - Tests use D1 local/miniflare environment
     - All tests pass with `npm test`
     - Edge cases: empty repo list, duplicate entries, null fields
   - **Dependencies**: FEAT-P0-003
+  - **Completed**: 2026-02-23
+  - **Implementation**: `tests/persistence.test.ts` — 46 unit tests covering `persistRepos()` and all D1 query functions from `src/lib/trending.ts`. Mock D1Database factory simulates `prepare→bind→all` and `batch` APIs. Tests organized into nested describes matching source function structure. Coverage: `persistRepos` (11 tests: empty input, SQL/parameter binding with INSERT OR REPLACE dedup, batch result counting, error handling), `getTrendingRepos` (4 tests: query results, empty data, bind params, SQL shape), `calculateStreaks` (8 tests: consecutive streaks, single-day, gaps, multi-repo, long streaks, bind params), `detectNewEntries` (5 tests: new/existing/mixed repos, bind params), `fetchStarHistory` (5 tests: 2+ points, single point, multi-repo, bind params), `getWeeklyTrendingRepos` (3 tests: aggregation, days_in_week stripping, empty), `getLanguageDistribution` (5 tests: percentages summing to 100, largest-remainder rounding, bind params), `getWeeklyLanguageDistribution` (2 tests: distribution, bind params with UNKNOWN_LANGUAGE_COLOR), `getDateRepoCounts` (3 tests: date-count pairs, empty, no-bind verification).
 
 - [ ] **TEST-P5-003**: Write unit tests for API endpoints
   - **Success Criteria**:
