@@ -30,4 +30,5 @@ pnpm-debug.log*
 !.env.example
 
 # ralph automation runner logs and named pipes
+ralph.sh
 .ralph/
