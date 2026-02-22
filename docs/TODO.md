@@ -267,7 +267,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Dark Mode
 
-- [ ] **UI-P1-006**: Implement dark mode toggle with system preference detection
+- [x] **UI-P1-006**: Implement dark mode toggle with system preference detection
   - **Success Criteria**:
     - Toggle button in header switches between light and dark mode
     - On first visit, defaults to user's system preference (`prefers-color-scheme`)
@@ -283,6 +283,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Check Application tab → Local Storage for `repotrend-theme` key
     - Emulate `prefers-color-scheme: dark`, clear localStorage, reload, and verify dark mode auto-applied
   - **Dependencies**: UI-P1-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: Enhanced `src/layouts/Layout.astro` — Inline `<script is:inline>` in `<head>` reads `localStorage('repotrend-theme')` with `prefers-color-scheme` fallback, adds `class="dark"` to `<html>` before paint (FOUC prevention). Dark mode CSS custom properties (GitHub-style dark palette) on `html.dark` with `color-scheme: dark`. Client `<script>` wires `#theme-toggle` button to toggle `.dark` class, persist to `localStorage`, and update `aria-label`. Sun/moon icon visibility toggled via `:global(html.dark)` scoped selectors.
 
 - [ ] **UI-P1-007**: Implement comprehensive dark mode color scheme
   - **Success Criteria**:

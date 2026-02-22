@@ -20,6 +20,14 @@ const {
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
+		<script is:inline>
+			(function () {
+				var stored = localStorage.getItem("repotrend-theme");
+				if (stored === "dark" || (!stored && matchMedia("(prefers-color-scheme: dark)").matches)) {
+					document.documentElement.classList.add("dark");
+				}
+			})();
+		</script>
 	</head>
 	<body>
 		<header>
@@ -108,6 +116,22 @@ const {
 				</a>
 			</div>
 		</footer>
+		<script>
+			const toggle = document.getElementById("theme-toggle")!;
+
+			function updateToggleLabel(): void {
+				const isDark = document.documentElement.classList.contains("dark");
+				toggle.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+			}
+
+			toggle.addEventListener("click", () => {
+				const isDark = document.documentElement.classList.toggle("dark");
+				localStorage.setItem("repotrend-theme", isDark ? "dark" : "light");
+				updateToggleLabel();
+			});
+
+			updateToggleLabel();
+		</script>
 	</body>
 </html>
 
@@ -137,6 +161,20 @@ const {
 		background-color: var(--color-bg);
 		color: var(--color-text);
 		line-height: 1.5;
+		color-scheme: light;
+	}
+
+	html.dark {
+		--color-bg: #0d1117;
+		--color-bg-secondary: #161b22;
+		--color-text: #e6edf3;
+		--color-text-secondary: #8b949e;
+		--color-border: #30363d;
+		--color-link: #58a6ff;
+		--color-link-hover: #79c0ff;
+		--color-accent: #58a6ff;
+		--color-accent-text: #ffffff;
+		color-scheme: dark;
 	}
 
 	body {
@@ -222,14 +260,26 @@ const {
 		border-color: var(--color-text-secondary);
 	}
 
-	/* Placeholder: show moon by default (light mode), sun in dark mode.
-	   Actual toggle logic will be wired in UI-P1-006. */
+	#theme-toggle:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	/* Light mode: show moon icon (switch to dark). Dark mode: show sun icon (switch to light). */
 	.icon-sun {
 		display: none;
 	}
 
 	.icon-moon {
 		display: block;
+	}
+
+	:global(html.dark) .icon-sun {
+		display: block;
+	}
+
+	:global(html.dark) .icon-moon {
+		display: none;
 	}
 
 	/* Main */
