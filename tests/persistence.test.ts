@@ -49,20 +49,25 @@ function sampleTrendingRepo(overrides: Partial<TrendingRepo> = {}): TrendingRepo
  */
 function mockDB(
 	config: {
-		queryResults?: any[];
+		queryResults?: unknown[];
 		batchResults?: Array<{ success: boolean; meta: { changes?: number } }>;
 		batchError?: Error;
 	} = {},
 ) {
 	const calls = {
 		prepare: [] as string[],
-		bind: [] as any[][],
+		bind: [] as unknown[][],
 		batchCount: 0,
 	};
 
-	const createStatement = () => {
-		const stmt: any = {
-			bind(...args: any[]) {
+	interface MockStatement {
+		bind(...args: unknown[]): MockStatement;
+		all(): Promise<{ results: unknown[]; success: boolean; meta: Record<string, unknown> }>;
+	}
+
+	const createStatement = (): MockStatement => {
+		const stmt: MockStatement = {
+			bind(...args: unknown[]) {
 				calls.bind.push(args);
 				return stmt;
 			},
@@ -78,7 +83,7 @@ function mockDB(
 			calls.prepare.push(sql);
 			return createStatement();
 		},
-		async batch(stmts: any[]) {
+		async batch(stmts: unknown[]) {
 			calls.batchCount++;
 			if (config.batchError) throw config.batchError;
 			return config.batchResults ?? stmts.map(() => ({ success: true, meta: { changes: 1 } }));
@@ -228,7 +233,7 @@ describe("persistRepos", () => {
 
 		it("wraps non-Error thrown values", async () => {
 			const { db } = mockDB();
-			(db as any).batch = async () => {
+			(db as unknown as Record<string, unknown>).batch = async () => {
 				throw "unknown failure";
 			};
 			await expect(persistRepos(db, [sampleParsedRepo()], TEST_DATE)).rejects.toThrow(
@@ -529,6 +534,7 @@ describe("getWeeklyTrendingRepos", () => {
 			],
 		});
 		const result = await getWeeklyTrendingRepos(db, WEEK_START, WEEK_END);
+		// biome-ignore lint/suspicious/noExplicitAny: verifying internal DB column is stripped from output
 		expect((result.repos[0] as any).days_in_week).toBeUndefined();
 	});
 

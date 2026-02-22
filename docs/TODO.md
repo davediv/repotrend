@@ -785,13 +785,15 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-23
   - **Implementation**: `tests/persistence.test.ts` — 46 unit tests covering `persistRepos()` and all D1 query functions from `src/lib/trending.ts`. Mock D1Database factory simulates `prepare→bind→all` and `batch` APIs. Tests organized into nested describes matching source function structure. Coverage: `persistRepos` (11 tests: empty input, SQL/parameter binding with INSERT OR REPLACE dedup, batch result counting, error handling), `getTrendingRepos` (4 tests: query results, empty data, bind params, SQL shape), `calculateStreaks` (8 tests: consecutive streaks, single-day, gaps, multi-repo, long streaks, bind params), `detectNewEntries` (5 tests: new/existing/mixed repos, bind params), `fetchStarHistory` (5 tests: 2+ points, single point, multi-repo, bind params), `getWeeklyTrendingRepos` (3 tests: aggregation, days_in_week stripping, empty), `getLanguageDistribution` (5 tests: percentages summing to 100, largest-remainder rounding, bind params), `getWeeklyLanguageDistribution` (2 tests: distribution, bind params with UNKNOWN_LANGUAGE_COLOR), `getDateRepoCounts` (3 tests: date-count pairs, empty, no-bind verification).
 
-- [ ] **TEST-P5-003**: Write unit tests for API endpoints
+- [x] **TEST-P5-003**: Write unit tests for API endpoints
   - **Success Criteria**:
     - Tests cover all API routes: `/api/trending/[date]`, `/api/dates`, `/api/trending/week/[date]`, `/api/search`
     - Tests verify correct HTTP status codes, response shapes, and error handling
     - Tests use mock D1 data
     - All tests pass with `npm test`
   - **Dependencies**: API-P1-001, API-P1-002, API-P2-001
+  - **Completed**: 2026-02-23
+  - **Implementation**: `tests/api-endpoints.test.ts` — 52 unit tests covering all 7 API endpoints. Mock infrastructure: D1 mock with sequential query support (`queryResultsByIndex`), KV mock with put tracking, typed sample factories (`sampleRepo`, `weeklyRepoRow`), `validationContext()` helper. Endpoints tested: `/api/trending/[date]` (14 tests: response shape, streak/new-entry/star-history enrichment, KV caching with TTL for today vs immutable for historical, Cache-Control headers, 400/500 error handling), `/api/dates` (4 tests: date range, empty results, DB errors, no-store headers), `/api/trending/week/[date]` (10 tests: weekly aggregation, partial week metadata, KV caching, validation, errors), `/api/search` (7 tests: query matching, result grouping, empty results, missing query param, errors), `/api/compare` (8 tests: set intersection/difference, KV caching, parameter validation, errors), `/api/languages/[date]` (4 tests: distribution percentages, caching, errors), `/api/languages/week/[date]` (4 tests: weekly distribution, caching, errors).
 
 - [ ] **TEST-P5-004**: Write integration test for full scrape pipeline
   - **Success Criteria**:
