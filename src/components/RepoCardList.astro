@@ -3,18 +3,37 @@
 // eliminating the client-side fetch that previously delayed LCP and caused CLS.
 // Shared styles live in src/styles/repo-card.css (imported globally via Layout.astro).
 import RepoCard from "./RepoCard.astro";
-import type { TrendingRepo } from "../lib/trending";
+import type { TrendingRepo, WeeklyTrendingRepo } from "../lib/trending";
 
 interface Props {
 	viewMode?: "daily" | "weekly";
-	repos: TrendingRepo[];
+	repos: TrendingRepo[] | WeeklyTrendingRepo[];
+	/** Week range label displayed as a header (weekly view only). */
+	weekLabel?: string;
+	/** Whether the week has fewer than 7 days of data (weekly view only). */
+	partial?: boolean;
 }
 
-const { viewMode = "daily", repos } = Astro.props;
+const { viewMode = "daily", repos, weekLabel, partial } = Astro.props;
+const isWeekly = viewMode === "weekly";
+const emptyMessage = isWeekly
+	? "No trending data available for this week."
+	: "No trending data available for this date.";
 ---
 
+{isWeekly && weekLabel && (
+	<div class="weekly-header">
+		<h2 class="week-range">{weekLabel}</h2>
+		{partial && (
+			<span class="partial-badge" title="Data does not span the full 7 days for this week">
+				Partial week
+			</span>
+		)}
+	</div>
+)}
+
 {repos.length > 0 ? (
-	<ol class="card-list-results" aria-label="Trending repositories">
+	<ol class="card-list-results" aria-label={isWeekly ? "Weekly trending repositories" : "Trending repositories"}>
 		{repos.map((repo, i) => (
 			<li>
 				<RepoCard
@@ -26,8 +45,9 @@ const { viewMode = "daily", repos } = Astro.props;
 					languageColor={repo.language_color}
 					totalStars={repo.total_stars}
 					forks={repo.forks}
-					starsToday={repo.stars_today}
+					starsToday={isWeekly ? (repo as WeeklyTrendingRepo).total_stars_gained : (repo as TrendingRepo).stars_today}
 					viewMode={viewMode}
+					appearances={isWeekly ? (repo as WeeklyTrendingRepo).appearances : undefined}
 				/>
 			</li>
 		))}
@@ -39,11 +59,38 @@ const { viewMode = "daily", repos } = Astro.props;
 			<polyline points="14 2 14 8 20 8"></polyline>
 			<line x1="9" y1="15" x2="15" y2="15"></line>
 		</svg>
-		<p>No trending data available for this date.</p>
+		<p>{emptyMessage}</p>
 	</div>
 )}
 
 <style>
+	.weekly-header {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.week-range {
+		margin: 0;
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--color-text);
+	}
+
+	.partial-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.125rem 0.5rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--color-stars-today);
+		background-color: var(--color-bg-secondary);
+		border: 1px solid var(--color-border);
+		border-radius: 1rem;
+		white-space: nowrap;
+	}
+
 	.card-list-results {
 		display: flex;
 		flex-direction: column;
@@ -67,5 +114,11 @@ const { viewMode = "daily", repos } = Astro.props;
 	.card-list-empty p {
 		margin: 0;
 		font-size: 1rem;
+	}
+
+	@media (max-width: 640px) {
+		.week-range {
+			font-size: 1.0625rem;
+		}
 	}
 </style>

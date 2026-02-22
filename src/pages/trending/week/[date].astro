@@ -4,8 +4,14 @@ import DatePicker from "../../../components/DatePicker.astro";
 import Toolbar from "../../../components/Toolbar.astro";
 import ViewToggle from "../../../components/ViewToggle.astro";
 import RepoCardList from "../../../components/RepoCardList.astro";
-import { formatWeekRange, getMondayOfWeek, isValidBrowseDate } from "../../../lib/dates";
-import { getTrendingRepos, type TrendingRepo } from "../../../lib/trending";
+import {
+	formatWeekRange,
+	getMondayOfWeek,
+	getSundayOfWeek,
+	isValidBrowseDate,
+	todayUTC,
+} from "../../../lib/dates";
+import { getWeeklyTrendingRepos, type WeeklyTrendingRepo } from "../../../lib/trending";
 
 export const prerender = false;
 
@@ -23,11 +29,17 @@ if (date !== monday) {
 }
 
 const weekLabel = formatWeekRange(date);
+const weekEnd = getSundayOfWeek(monday);
 
-let repos: TrendingRepo[] = [];
+let repos: WeeklyTrendingRepo[] = [];
+let partial = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
-	repos = await getTrendingRepos(db, date);
+	const result = await getWeeklyTrendingRepos(db, monday, weekEnd);
+	repos = result.repos;
+	const today = todayUTC();
+	const weekNotFinished = weekEnd > today;
+	partial = weekNotFinished || result.daysWithData < 7;
 } catch (error) {
 	const message = error instanceof Error ? error.message : String(error);
 	console.error(
@@ -50,5 +62,5 @@ try {
 		<DatePicker selectedDate={date} viewMode="weekly" />
 		<ViewToggle activeView="weekly" currentDate={date} />
 	</Toolbar>
-	<RepoCardList viewMode="weekly" repos={repos} />
+	<RepoCardList viewMode="weekly" repos={repos} weekLabel={weekLabel} partial={partial} />
 </Layout>
