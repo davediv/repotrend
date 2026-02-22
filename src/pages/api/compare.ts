@@ -1,13 +1,9 @@
 import type { APIRoute } from "astro";
 import { isValidDate, todayUTC } from "../../lib/dates";
 import { logError } from "../../lib/log";
-import { getTrendingRepos, type TrendingRepo } from "../../lib/trending";
+import { getTrendingRepos, repoKey, type TrendingRepo } from "../../lib/trending";
 
 export const prerender = false;
-
-function repoKey(r: TrendingRepo): string {
-	return `${r.repo_owner}/${r.repo_name}`;
-}
 
 export const GET: APIRoute = async ({ url, locals }) => {
 	const date1 = url.searchParams.get("date1")?.trim() ?? "";
