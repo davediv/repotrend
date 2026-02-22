@@ -1,3 +1,104 @@
+/** Language distribution entry for a date or week. */
+export interface LanguageDistribution {
+	language: string;
+	color: string;
+	count: number;
+	percentage: number;
+}
+
+/** Default color for repos with no language color. */
+const UNKNOWN_LANGUAGE_COLOR = "#8b949e";
+
+/**
+ * Query language distribution for a single date.
+ * Groups by language name, counts repos per language,
+ * and calculates percentages that sum to exactly 100%.
+ */
+export async function getLanguageDistribution(
+	db: D1Database,
+	date: string,
+): Promise<LanguageDistribution[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT
+				COALESCE(language, 'Unknown') AS language,
+				COALESCE(MAX(language_color), ?) AS color,
+				COUNT(*) AS count
+			FROM trending_repos
+			WHERE trending_date = ?
+			GROUP BY COALESCE(language, 'Unknown')
+			ORDER BY count DESC`,
+		)
+		.bind(UNKNOWN_LANGUAGE_COLOR, date)
+		.all<{ language: string; color: string; count: number }>();
+
+	return applyPercentages(results);
+}
+
+/**
+ * Query language distribution for a Monday–Sunday week range.
+ * Counts distinct repos per language (so a repo appearing on 5 days
+ * counts as 1 for its language).
+ */
+export async function getWeeklyLanguageDistribution(
+	db: D1Database,
+	weekStart: string,
+	weekEnd: string,
+): Promise<LanguageDistribution[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT
+				COALESCE(language, 'Unknown') AS language,
+				COALESCE(MAX(language_color), ?) AS color,
+				COUNT(DISTINCT repo_owner || '/' || repo_name) AS count
+			FROM trending_repos
+			WHERE trending_date >= ? AND trending_date <= ?
+			GROUP BY COALESCE(language, 'Unknown')
+			ORDER BY count DESC`,
+		)
+		.bind(UNKNOWN_LANGUAGE_COLOR, weekStart, weekEnd)
+		.all<{ language: string; color: string; count: number }>();
+
+	return applyPercentages(results);
+}
+
+/**
+ * Calculate percentages using the largest-remainder method so they sum to
+ * exactly 100. Works in integer tenths to avoid floating-point accumulation.
+ * Each percentage is rounded to one decimal place.
+ */
+function applyPercentages(
+	rows: { language: string; color: string; count: number }[],
+): LanguageDistribution[] {
+	const total = rows.reduce((sum, r) => sum + r.count, 0);
+	if (total === 0) return [];
+
+	// Work in integer tenths (1000 = 100.0%) to avoid floating-point drift
+	const entries = rows.map((r) => {
+		const rawTenths = (r.count / total) * 1000;
+		const flooredTenths = Math.floor(rawTenths);
+		return { ...r, tenths: flooredTenths, remainder: rawTenths - flooredTenths };
+	});
+
+	// Distribute leftover tenths to reach exactly 1000 (= 100.0%)
+	let leftover = 1000 - entries.reduce((sum, e) => sum + e.tenths, 0);
+
+	const sorted = entries
+		.map((e, i) => ({ i, remainder: e.remainder }))
+		.sort((a, b) => b.remainder - a.remainder);
+
+	for (const { i } of sorted) {
+		if (leftover <= 0) break;
+		entries[i].tenths++;
+		leftover--;
+	}
+
+	return entries.map(({ tenths, remainder: _, ...e }) => ({
+		...e,
+		percentage: tenths / 10,
+	}));
+}
+
 /** One data point in a repo's star history. */
 export interface StarHistoryPoint {
 	date: string;
