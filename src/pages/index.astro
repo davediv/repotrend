@@ -6,13 +6,44 @@ import ViewToggle from "../components/ViewToggle.astro";
 import RepoCardList from "../components/RepoCardList.astro";
 import { todayUTC } from "../lib/dates";
 
+export const prerender = false;
+
 const today = todayUTC();
+let effectiveDate = today;
+
+try {
+	const db = Astro.locals.runtime.env.DB;
+	const { results } = await db
+		.prepare(
+			`SELECT trending_date FROM trending_repos
+			 WHERE trending_date <= ?
+			 ORDER BY trending_date DESC
+			 LIMIT 1`,
+		)
+		.bind(today)
+		.all<{ trending_date: string }>();
+
+	if (results.length > 0) {
+		effectiveDate = results[0].trending_date;
+	}
+} catch (error) {
+	const message = error instanceof Error ? error.message : String(error);
+	console.error(
+		JSON.stringify({
+			level: "error",
+			event: "homepage_date_fallback_error",
+			timestamp: new Date().toISOString(),
+			error: message,
+		}),
+	);
+	// Fall through with today's date and let the client handle empty state
+}
 ---
 
 <Layout>
 	<Toolbar>
-		<DatePicker />
-		<ViewToggle activeView="daily" currentDate={today} />
+		<DatePicker selectedDate={effectiveDate} viewMode="daily" />
+		<ViewToggle activeView="daily" currentDate={effectiveDate} />
 	</Toolbar>
-	<RepoCardList date={today} />
+	<RepoCardList date={effectiveDate} />
 </Layout>
