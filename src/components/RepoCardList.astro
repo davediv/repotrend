@@ -4,26 +4,30 @@
 // Shared styles live in src/styles/repo-card.css (imported globally via Layout.astro).
 import RepoCard from "./RepoCard.astro";
 import type { TrendingRepo, WeeklyTrendingRepo } from "../lib/trending";
+import { getSundayOfWeek } from "../lib/dates";
 
 interface Props {
 	viewMode?: "daily" | "weekly";
 	repos: TrendingRepo[] | WeeklyTrendingRepo[];
 	/** Week range label displayed as a header (weekly view only). */
 	weekLabel?: string;
+	/** ISO week-start date for the <time> datetime attribute (weekly view only). */
+	weekStart?: string;
 	/** Whether the week has fewer than 7 days of data (weekly view only). */
 	partial?: boolean;
 }
 
-const { viewMode = "daily", repos, weekLabel, partial } = Astro.props;
+const { viewMode = "daily", repos, weekLabel, weekStart, partial } = Astro.props;
 const isWeekly = viewMode === "weekly";
 const emptyMessage = isWeekly
 	? "No trending data available for this week."
 	: "No trending data available for this date.";
+const weekDatetime = weekStart ? `${weekStart}/${getSundayOfWeek(weekStart)}` : undefined;
 ---
 
 {isWeekly && weekLabel && (
 	<div class="weekly-header">
-		<h2 class="week-range">{weekLabel}</h2>
+		<h2 class="week-range"><time datetime={weekDatetime}>{weekLabel}</time></h2>
 		{partial && (
 			<span class="partial-badge" title="Data does not span the full 7 days for this week">
 				Partial week
@@ -53,7 +57,7 @@ const emptyMessage = isWeekly
 		))}
 	</ol>
 ) : (
-	<div class="card-list-empty">
+	<div class="card-list-empty" role="status">
 		<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 			<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
 			<polyline points="14 2 14 8 20 8"></polyline>

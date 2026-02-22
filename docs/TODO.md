@@ -429,7 +429,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
 
 ### Accessibility
 
-- [ ] **UI-P2-002**: Implement WCAG 2.1 AA accessibility compliance
+- [x] **UI-P2-002**: Implement WCAG 2.1 AA accessibility compliance
   - **Success Criteria**:
     - All interactive elements are keyboard navigable (Tab, Enter, Escape, Arrow keys)
     - Focus indicators are visible on all focusable elements
@@ -447,6 +447,8 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
     - Use DevTools accessibility panel to check contrast ratios
     - Verify all `<img>` elements have `alt` attributes
   - **Dependencies**: UI-P1-001, UI-P1-004, UI-P1-006
+  - **Completed**: 2026-02-22
+  - **Implementation**: Added `aria-hidden="true"` to decorative `.language-dot` in `RepoCard.astro`. Added sr-only "(opens in new tab)" text to external repo links in cards and footer links in `Layout.astro`. Wrapped weekly header in `<time>` element with ISO datetime attribute in `RepoCardList.astro` (new `weekStart` prop). Added `role="status"` to empty state container. Updated GitHub footer link `aria-label` to indicate new tab. Verified all color combinations pass WCAG AA 4.5:1 contrast ratio in both light and dark themes. Pre-existing a11y features confirmed: skip-to-content link, page landmarks, global `focus-visible` styles, dynamic dark mode toggle `aria-label`, date picker with `role="group"` and `aria-label`, semantic HTML (`<article>`, `<h2>`, `<ol>`, `<li>`).
 
 ### SEO & Meta
 

@@ -39,6 +39,7 @@ const datetimeAttr =
 			stroke-width="2"
 			stroke-linecap="round"
 			stroke-linejoin="round"
+			aria-hidden="true"
 		>
 			<polyline points="15 18 9 12 15 6"></polyline>
 		</svg>
@@ -61,6 +62,7 @@ const datetimeAttr =
 				stroke-width="2"
 				stroke-linecap="round"
 				stroke-linejoin="round"
+				aria-hidden="true"
 			>
 				<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
 				<line x1="16" y1="2" x2="16" y2="6"></line>
@@ -96,6 +98,7 @@ const datetimeAttr =
 			stroke-width="2"
 			stroke-linecap="round"
 			stroke-linejoin="round"
+			aria-hidden="true"
 		>
 			<polyline points="9 18 15 12 9 6"></polyline>
 		</svg>
@@ -318,11 +321,6 @@ const datetimeAttr =
 		background-color: var(--color-bg-secondary);
 	}
 
-	.date-nav-btn:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 2px;
-	}
-
 	.date-nav-btn:disabled {
 		opacity: 0.4;
 		cursor: not-allowed;
@@ -355,11 +353,6 @@ const datetimeAttr =
 	.date-display:hover {
 		border-color: var(--color-border-hover);
 		background-color: var(--color-bg-secondary);
-	}
-
-	.date-display:focus-visible {
-		outline: 2px solid var(--color-accent);
-		outline-offset: 2px;
 	}
 
 	.calendar-icon {
