@@ -15,13 +15,16 @@ import {
 } from "../../../lib/dates";
 import { logError } from "../../../lib/log";
 import {
+	getDateRepoCounts,
 	getWeeklyLanguageDistribution,
 	getWeeklyTrendingRepos,
+	type DateRepoCount,
 	type LanguageDistribution,
 	type WeeklyTrendingRepo,
 } from "../../../lib/trending";
 import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
 import LanguageChart from "../../../components/LanguageChart.astro";
+import CalendarHeatmap from "../../../components/CalendarHeatmap.astro";
 
 export const prerender = false;
 
@@ -44,6 +47,7 @@ const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
 let repos: WeeklyTrendingRepo[] = [];
 let languages: LanguageDistribution[] = [];
+let dateCounts: DateRepoCount[] = [];
 let partial = false;
 let hasError = false;
 try {
@@ -57,6 +61,11 @@ try {
 		languages = await getWeeklyLanguageDistribution(db, monday, weekEnd);
 	} catch {
 		// Non-fatal: page renders without language chart
+	}
+	try {
+		dateCounts = await getDateRepoCounts(db);
+	} catch {
+		// Non-fatal: page renders without heatmap
 	}
 } catch (error) {
 	hasError = true;
@@ -74,5 +83,6 @@ try {
 		<SortDropdown activeSort={sort} viewMode="weekly" />
 	</Toolbar>
 	<LanguageChart languages={languages} />
+	<CalendarHeatmap dateCounts={dateCounts} selectedDate={date} />
 	{hasError ? <ErrorFallback /> : <RepoCardList viewMode="weekly" repos={repos} weekLabel={weekLabel} weekStart={monday} partial={partial} />}
 </Layout>

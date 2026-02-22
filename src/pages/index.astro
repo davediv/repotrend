@@ -9,13 +9,16 @@ import ErrorFallback from "../components/ErrorFallback.astro";
 import { todayUTC } from "../lib/dates";
 import { logError } from "../lib/log";
 import {
+	getDateRepoCounts,
 	getLanguageDistribution,
 	getTrendingReposWithStreaks,
+	type DateRepoCount,
 	type LanguageDistribution,
 	type TrendingRepo,
 } from "../lib/trending";
 import { parseSortParam, sortDailyRepos } from "../lib/sort";
 import LanguageChart from "../components/LanguageChart.astro";
+import CalendarHeatmap from "../components/CalendarHeatmap.astro";
 
 export const prerender = false;
 
@@ -23,6 +26,7 @@ const today = todayUTC();
 let effectiveDate = today;
 let repos: TrendingRepo[] = [];
 let languages: LanguageDistribution[] = [];
+let dateCounts: DateRepoCount[] = [];
 let hasError = false;
 const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
@@ -48,6 +52,11 @@ try {
 	} catch {
 		// Non-fatal: page renders without language chart
 	}
+	try {
+		dateCounts = await getDateRepoCounts(db);
+	} catch {
+		// Non-fatal: page renders without heatmap
+	}
 } catch (error) {
 	hasError = true;
 	logError("homepage_ssr_error")(error);
@@ -64,5 +73,6 @@ try {
 		<SortDropdown activeSort={sort} />
 	</Toolbar>
 	<LanguageChart languages={languages} />
+	<CalendarHeatmap dateCounts={dateCounts} selectedDate={effectiveDate} />
 	{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} />}
 </Layout>

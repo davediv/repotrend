@@ -1,5 +1,11 @@
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Parse a YYYY-MM-DD string into a Date object (local time). */
+export function parseDate(dateStr: string): Date {
+	const [year, month, day] = dateStr.split("-").map(Number);
+	return new Date(year, month - 1, day);
+}
+
 /** Validate that a string is a real YYYY-MM-DD calendar date. */
 export function isValidDate(value: string): boolean {
 	if (!DATE_RE.test(value)) return false;
