@@ -143,13 +143,15 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-22
   - **Implementation**: `src/pages/api/trending/[date].ts` — Astro API route with YYYY-MM-DD validation (regex + semantic date check), D1 query using `trending_date` index with `ORDER BY stars_today DESC`, structured error handling for D1 failures
 
-- [ ] **API-P1-002**: Implement API endpoint to get available date range
+- [x] **API-P1-002**: Implement API endpoint to get available date range
   - **Success Criteria**:
     - `GET /api/dates` returns JSON with `{ earliest: "YYYY-MM-DD", latest: "YYYY-MM-DD", dates: [...] }`
     - `dates` array contains all distinct dates that have data in the archive
     - Response is cacheable (add `Cache-Control` header)
     - Query executes in under 100ms
   - **Dependencies**: DB-P0-001
+  - **Completed**: 2026-02-22
+  - **Implementation**: `src/pages/api/dates.ts` — Astro API route returning distinct trending dates from D1 with `Cache-Control: public, max-age=300, s-maxage=300`, leverages `idx_trending_repos_trending_date` index for efficient DISTINCT+ORDER BY
 
 - [ ] **API-P1-003**: Implement KV caching layer for date-based API responses
   - **Success Criteria**:
