@@ -3,6 +3,7 @@ import { logError, logInfo } from "../log";
 import { fetchTrendingPage, randomDelay } from "./fetcher";
 import { parseTrendingPage } from "./parser";
 import { persistRepos } from "./persistence";
+import { enrichReposWithTopics } from "./topics";
 
 export type ScrapeErrorType = "fetch_error" | "parse_error" | "persist_error" | "unknown_error";
 
@@ -56,7 +57,14 @@ export async function runScrapePipeline(
 			});
 		}
 
-		// Stage 3: Persist
+		// Stage 3: Enrich with GitHub topics (best-effort, non-fatal)
+		try {
+			repos = await enrichReposWithTopics(repos);
+		} catch (error) {
+			logError("repo_topics_enrichment_error", { date })(error);
+		}
+
+		// Stage 4: Persist
 		let rowsWritten: number;
 		try {
 			rowsWritten = await persistRepos(db, repos, date);
@@ -67,8 +75,15 @@ export async function runScrapePipeline(
 		}
 
 		const durationMs = Date.now() - start;
+		const reposWithTopics = repos.filter((r) => (r.topics?.length ?? 0) > 0).length;
 
-		logInfo("scrape_success", { date, repoCount: repos.length, rowsWritten, durationMs });
+		logInfo("scrape_success", {
+			date,
+			repoCount: repos.length,
+			rowsWritten,
+			reposWithTopics,
+			durationMs,
+		});
 
 		return {
 			success: true,

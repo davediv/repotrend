@@ -1,5 +1,14 @@
 import type { ParsedRepo } from "./parser";
 
+function toTopicsJson(topics: string[] | undefined): string {
+	if (!Array.isArray(topics)) return "[]";
+	const normalized = topics
+		.filter((topic): topic is string => typeof topic === "string")
+		.map((topic) => topic.trim().toLowerCase())
+		.filter((topic) => topic.length > 0);
+	return JSON.stringify([...new Set(normalized)]);
+}
+
 /**
  * Persists an array of parsed trending repos into the D1 `trending_repos` table.
  *
@@ -26,8 +35,8 @@ export async function persistRepos(
 		db
 			.prepare(
 				`INSERT OR REPLACE INTO trending_repos
-          (repo_owner, repo_name, description, language, language_color, total_stars, forks, stars_today, trending_date, scraped_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (repo_owner, repo_name, description, language, language_color, total_stars, forks, stars_today, trending_date, scraped_at, topics_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			)
 			.bind(
 				repo.repo_owner,
@@ -40,6 +49,7 @@ export async function persistRepos(
 				repo.stars_today,
 				date,
 				scrapedAt,
+				toTopicsJson(repo.topics),
 			),
 	);
 

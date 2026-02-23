@@ -143,6 +143,7 @@ export interface TrendingRepo {
 	total_stars: number;
 	forks: number;
 	stars_today: number;
+	topics?: string[];
 	/** Consecutive-day trending streak ending on the queried date (1 = single day). */
 	streak?: number;
 	/** Whether this is the repo's first appearance in the archive. */
@@ -166,6 +167,7 @@ export interface WeeklyTrendingRepo {
 	appearances: number;
 	total_stars_gained: number;
 	max_stars_today: number;
+	topics?: string[];
 }
 
 /** Response shape for the weekly trending API. */
@@ -176,6 +178,17 @@ export interface WeeklyTrendingResponse {
 	repos: WeeklyTrendingRepo[];
 }
 
+export function parseTopicsJson(topicsJson: string | null | undefined): string[] {
+	if (!topicsJson) return [];
+	try {
+		const parsed = JSON.parse(topicsJson);
+		if (!Array.isArray(parsed)) return [];
+		return parsed.filter((topic): topic is string => typeof topic === "string");
+	} catch {
+		return [];
+	}
+}
+
 /**
  * Query trending repos for a given date from D1, ordered by stars_today descending.
  * Throws on D1 errors — callers must handle failures.
@@ -184,14 +197,17 @@ export async function getTrendingRepos(db: D1Database, date: string): Promise<Tr
 	const { results } = await db
 		.prepare(
 			`SELECT repo_owner, repo_name, description, language, language_color,
-		            total_stars, forks, stars_today
+		            total_stars, forks, stars_today, topics_json
 		       FROM trending_repos
 		      WHERE trending_date = ?
 		      ORDER BY stars_today DESC`,
 		)
 		.bind(date)
-		.all<TrendingRepo>();
-	return results;
+		.all<TrendingRepo & { topics_json: string | null }>();
+	return results.map(({ topics_json, ...repo }) => ({
+		...repo,
+		topics: parseTopicsJson(topics_json),
+	}));
 }
 
 /** Result from `getWeeklyTrendingRepos` including the number of distinct days with data. */
@@ -222,6 +238,7 @@ export async function getWeeklyTrendingRepos(
 				language_color,
 				total_stars,
 				forks,
+				topics_json,
 				appearances,
 				total_stars_gained,
 				max_stars_today,
@@ -235,6 +252,7 @@ export async function getWeeklyTrendingRepos(
 					language_color,
 					total_stars,
 					forks,
+					topics_json,
 					COUNT(*) OVER (PARTITION BY repo_owner, repo_name) AS appearances,
 					SUM(stars_today) OVER (PARTITION BY repo_owner, repo_name) AS total_stars_gained,
 					MAX(stars_today) OVER (PARTITION BY repo_owner, repo_name) AS max_stars_today,
@@ -247,10 +265,13 @@ export async function getWeeklyTrendingRepos(
 			ORDER BY appearances DESC, total_stars_gained DESC`,
 		)
 		.bind(weekStart, weekEnd)
-		.all<WeeklyTrendingRepo & { days_in_week: number }>();
+		.all<WeeklyTrendingRepo & { topics_json: string | null; days_in_week: number }>();
 
 	const daysWithData = results[0]?.days_in_week ?? 0;
-	const repos = results.map(({ days_in_week: _, ...repo }) => repo);
+	const repos = results.map(({ days_in_week: _, topics_json, ...repo }) => ({
+		...repo,
+		topics: parseTopicsJson(topics_json),
+	}));
 
 	return { repos, daysWithData };
 }

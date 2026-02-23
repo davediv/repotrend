@@ -96,6 +96,8 @@ const query = Astro.url.searchParams.get("q")?.trim() ?? "";
 		const safeColor = sanitizeHexColor(repo.language_color);
 		const recentDates = repo.dates.slice(0, 10);
 		const hasMore = repo.dates.length > 10;
+		const visibleTopics = repo.topics.slice(0, 8);
+		const hiddenTopicCount = repo.topics.length - visibleTopics.length;
 
 		return `<li>
 			<article class="search-result-card">
@@ -129,6 +131,26 @@ const query = Astro.url.searchParams.get("q")?.trim() ?? "";
 					</div>
 				</div>
 				${repo.description ? `<p class="repo-description">${escapeHTML(repo.description)}</p>` : ""}
+				${
+					visibleTopics.length > 0
+						? `<div class="result-topics">
+							<span class="topics-label">Topics:</span>
+							<div class="topics-list">
+								${visibleTopics
+									.map(
+										(topic) =>
+											`<a href="/search?q=${encodeURIComponent(topic)}" class="topic-tag">#${escapeHTML(topic)}</a>`,
+									)
+									.join("")}
+								${
+									hiddenTopicCount > 0
+										? `<span class="topic-more" title="${hiddenTopicCount} more topics not shown">+${hiddenTopicCount}</span>`
+										: ""
+								}
+							</div>
+						</div>`
+						: ""
+				}
 				<div class="result-dates">
 					<span class="dates-label">Trending on:</span>
 					<div class="dates-list">
@@ -358,6 +380,26 @@ const query = Astro.url.searchParams.get("q")?.trim() ?? "";
 		margin-top: 0.75rem;
 		padding-top: 0.75rem;
 		border-top: 1px solid var(--color-border);
+	}
+
+	.result-topics {
+		margin-top: 0.75rem;
+	}
+
+	.topics-label {
+		display: block;
+		margin-bottom: 0.375rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.topics-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
 	}
 
 	.dates-label {

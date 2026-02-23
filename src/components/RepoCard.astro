@@ -12,6 +12,7 @@ interface Props {
 	description: string | null;
 	language: string | null;
 	languageColor: string | null;
+	topics?: string[];
 	totalStars: number;
 	forks: number;
 	starsToday: number;
@@ -33,6 +34,7 @@ const {
 	description,
 	language,
 	languageColor,
+	topics = [],
 	totalStars,
 	forks,
 	starsToday,
@@ -50,6 +52,8 @@ const starsLabel = viewMode === "weekly" ? "this week" : "today";
 const appearanceLabel = appearances === 1 ? "1 day" : `${appearances} days`;
 const showStreak = streak != null && streak >= 2;
 const streakLabel = showStreak ? (streak === 1 ? "1 day" : `${streak} days`) : "";
+const visibleTopics = topics.slice(0, 6);
+const hiddenTopicCount = topics.length - visibleTopics.length;
 ---
 
 <article class="repo-card" aria-labelledby={headingId}>
@@ -100,6 +104,26 @@ const streakLabel = showStreak ? (streak === 1 ? "1 day" : `${streak} days`) : "
 		</div>
 
 		{description && <p class="repo-description">{description}</p>}
+		{visibleTopics.length > 0 && (
+			<ul class="repo-topics" aria-label="Repository topics">
+				{
+					visibleTopics.map((topic) => (
+						<li>
+							<a class="topic-tag" href={`/search?q=${encodeURIComponent(topic)}`}>
+								#{topic}
+							</a>
+						</li>
+					))
+				}
+				{hiddenTopicCount > 0 && (
+					<li>
+						<span class="topic-more" title={`${hiddenTopicCount} more topics not shown`}>
+							+{hiddenTopicCount}
+						</span>
+					</li>
+				)}
+			</ul>
+		)}
 
 		<div class="repo-meta">
 			{language && (
