@@ -24,10 +24,12 @@
 			"src/**",
 			"scripts/**",
 			"tests/**",
+			"e2e/**",
 			"biome.json",
 			"package.json",
 			"tsconfig.json",
-			"vitest.config.ts"
+			"vitest.config.ts",
+			"playwright.config.ts"
 		]
 	},
 	"overrides": [
