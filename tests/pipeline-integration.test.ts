@@ -359,7 +359,15 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const res = await getTrending(apiContext({ params: { date: MOCK_TODAY }, db, kv }));
 
 			expect(res.status).toBe(200);
-			const body = await res.json();
+			const body = (await res.json()) as Array<{
+				repo_owner: string;
+				repo_name: string;
+				description: string | null;
+				language: string | null;
+				total_stars: number;
+				stars_today: number;
+				forks: number;
+			}>;
 			expect(body).toHaveLength(3);
 
 			expect(body[0].repo_owner).toBe("facebook");
@@ -387,7 +395,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 
 			const res = await getTrending(apiContext({ params: { date: MOCK_TODAY }, db, kv }));
 
-			const body = await res.json();
+			const body = (await res.json()) as Array<{ streak: number; is_new_entry: boolean }>;
 			for (const repo of body) {
 				expect(repo.streak).toBe(1);
 				expect(repo.is_new_entry).toBe(false);
@@ -545,7 +553,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const res = await getCron(apiContext({ db, kv, request }));
 
 			expect(res.status).toBe(200);
-			const body = await res.json();
+			const body = (await res.json()) as { success: boolean; repoCount: number };
 			expect(body.success).toBe(true);
 			expect(body.repoCount).toBe(3);
 		});
@@ -560,7 +568,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const res = await getCron(apiContext({ db, kv, request }));
 
 			expect(res.status).toBe(200);
-			const body = await res.json();
+			const body = (await res.json()) as { skipped: boolean };
 			expect(body.skipped).toBe(true);
 		});
 
@@ -574,7 +582,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const res = await getCron(apiContext({ db, kv, request }));
 
 			expect(res.status).toBe(500);
-			const body = await res.json();
+			const body = (await res.json()) as { skipped: boolean; skipReason: string };
 			expect(body.skipped).toBe(true);
 			expect(body.skipReason).toBe("max_retries_exceeded");
 		});
@@ -610,7 +618,16 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const apiRes = await getTrending(apiContext({ params: { date: MOCK_TODAY }, db: apiDb, kv }));
 
 			expect(apiRes.status).toBe(200);
-			const apiBody = await apiRes.json();
+			const apiBody = (await apiRes.json()) as Array<{
+				repo_owner: string;
+				repo_name: string;
+				description: string | null;
+				language: string | null;
+				language_color: string | null;
+				total_stars: number;
+				forks: number;
+				stars_today: number;
+			}>;
 			expect(apiBody).toHaveLength(3);
 
 			// Verify complete data round-trip
