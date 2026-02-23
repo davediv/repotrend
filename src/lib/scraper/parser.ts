@@ -10,6 +10,8 @@ export interface ParsedRepo {
 	total_stars: number;
 	forks: number;
 	stars_today: number;
+	/** Optional enrichment from GitHub repo API (`/repos/{owner}/{repo}`). */
+	topics?: string[];
 }
 
 /**

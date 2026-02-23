@@ -5,6 +5,7 @@ import {
 	calculateStreaks,
 	detectNewEntries,
 	fetchStarHistory,
+	parseTopicsJson,
 	type TrendingRepo,
 } from "../../../lib/trending";
 
@@ -14,6 +15,7 @@ export const prerender = false;
 const TODAY_TTL_SECONDS = 3600;
 
 interface TrendingRow extends TrendingRepo {
+	topics_json: string | null;
 	trending_date: string;
 	scraped_at: string;
 }
@@ -64,12 +66,12 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	);
 
 	// 2. Fall through to D1
-	let results: TrendingRow[];
+	let rows: TrendingRow[];
 	try {
-		({ results } = await db
+		({ results: rows } = await db
 			.prepare(
 				`SELECT repo_owner, repo_name, description, language, language_color,
-                total_stars, forks, stars_today, trending_date, scraped_at
+                total_stars, forks, stars_today, topics_json, trending_date, scraped_at
            FROM trending_repos
           WHERE trending_date = ?
           ORDER BY stars_today DESC`,
@@ -83,6 +85,10 @@ export const GET: APIRoute = async ({ params, locals }) => {
 			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});
 	}
+	const results: TrendingRepo[] = rows.map(({ topics_json, ...row }) => ({
+		...row,
+		topics: parseTopicsJson(topics_json),
+	}));
 
 	// 3–5. Enrich results with streak, new-entry, and star-history data.
 	// NOTE: This mirrors getTrendingReposWithStreaks() — keep in sync.

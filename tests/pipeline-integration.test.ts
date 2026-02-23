@@ -20,6 +20,11 @@ vi.mock("../src/lib/scraper/fetcher", () => ({
 	randomDelay: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Avoid live GitHub API calls for topic enrichment in integration tests.
+vi.mock("../src/lib/scraper/topics", () => ({
+	enrichReposWithTopics: vi.fn(async (repos) => repos),
+}));
+
 import { fetchTrendingPage } from "../src/lib/scraper/fetcher";
 
 const mockedFetch = vi.mocked(fetchTrendingPage);

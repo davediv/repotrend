@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { logError } from "../../lib/log";
+import { parseTopicsJson } from "../../lib/trending";
 import type { SearchResult } from "../../lib/search-types";
 
 export const prerender = false;
@@ -28,6 +29,7 @@ interface SearchRow {
 	total_stars: number;
 	forks: number;
 	stars_today: number;
+	topics_json: string | null;
 	trending_date: string;
 }
 
@@ -77,7 +79,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			.prepare(
 				`SELECT
 					repo_owner, repo_name, description, language, language_color,
-					total_stars, forks, stars_today, trending_date
+					total_stars, forks, stars_today, topics_json, trending_date
 				FROM trending_repos
 				WHERE repo_owner LIKE ?1 ESCAPE '\\'
 					OR repo_name LIKE ?1 ESCAPE '\\'
@@ -125,6 +127,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 				total_stars: row.total_stars,
 				forks: row.forks,
 				stars_today: row.stars_today,
+				topics: parseTopicsJson(row.topics_json),
 				dates: [row.trending_date],
 			});
 		}

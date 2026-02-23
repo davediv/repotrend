@@ -8,6 +8,7 @@ export interface SearchResult {
 	total_stars: number;
 	forks: number;
 	stars_today: number;
+	topics: string[];
 	dates: string[];
 }
 
