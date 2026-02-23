@@ -805,7 +805,7 @@ RepoTrend is a historical archive for GitHub trending repositories built on Astr
   - **Completed**: 2026-02-23
   - **Implementation**: `tests/pipeline-integration.test.ts` — 24 integration tests covering the full scrape pipeline end-to-end. Tests organized into 6 describe blocks: fetch→parse→persist flow (5 tests: 3-repo and 25-repo fixtures, parameter binding verification, INSERT OR REPLACE SQL, todayUTC default), parser→persistence consistency (2 tests: shape validation, data fidelity), persisted data→API query flow (3 tests: getTrendingRepos query, API response matching, enrichment defaults), error propagation (4 tests: fetch_error, parse_error, persist_error, parser-fail-skips-persist), retry-aware pipeline (5 tests: skip-on-existing-data, fresh scrape success, KV retry counter increment, max-retries exceeded, recovery detection), cron API endpoint (4 tests: forbidden without header, 200 on success, 200 on skip, 500 on max retries), end-to-end round-trip (1 test: fixture HTML→parse→persist→query→API response data verification). Mock D1 factory with separated `first()`/`all()` index counters, mock KV with put/delete tracking. All 158 tests pass with `npm test`.
 
-- [ ] **TEST-P5-005**: Write visual regression / E2E tests for critical UI flows
+- [x] **TEST-P5-005**: Write visual regression / E2E tests for critical UI flows
   - **Success Criteria**:
     - E2E tests cover: homepage load, date navigation, weekly view toggle, dark mode toggle, search (P1)
     - Tests use browser automation (Playwright or similar)
