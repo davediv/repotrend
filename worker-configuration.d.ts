@@ -9,6 +9,10 @@ declare namespace Cloudflare {
 		CACHE: KVNamespace;
 		DB: D1Database;
 		ASSETS: Fetcher;
+		// Telegram notification secrets (set via `wrangler secret put`)
+		TELEGRAM_BOT_TOKEN?: string;
+		TELEGRAM_CHAT_ID?: string;
+		TELEGRAM_THREAD_ID?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

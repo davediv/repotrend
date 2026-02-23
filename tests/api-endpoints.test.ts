@@ -212,7 +212,7 @@ describe("GET /api/trending/[date]", () => {
 		it("returns 400 for invalid date format", async () => {
 			const res = await getTrending(validationContext({ params: { date: "not-a-date" } }));
 			expect(res.status).toBe(400);
-			expect((await res.json()).error).toContain("Invalid date format");
+			expect(((await res.json()) as { error: string }).error).toContain("Invalid date format");
 		});
 
 		it("returns 400 for missing date param", async () => {
@@ -319,7 +319,7 @@ describe("GET /api/trending/[date]", () => {
 			const { kv } = mockKV();
 			const res = await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
-			const body = await res.json();
+			const body = (await res.json()) as Array<{ streak: number; is_new_entry: boolean }>;
 			expect(body[0].streak).toBe(1);
 			expect(body[0].is_new_entry).toBe(false);
 		});
@@ -332,7 +332,7 @@ describe("GET /api/trending/[date]", () => {
 			const res = await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
 			expect(res.status).toBe(500);
-			const body = await res.json();
+			const body = (await res.json()) as { error: string; detail: string };
 			expect(body.error).toBe("Database query failed");
 			expect(body.detail).toBe("D1 timeout");
 			expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -351,7 +351,7 @@ describe("GET /api/trending/[date]", () => {
 			const res = await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
 			expect(res.status).toBe(200);
-			const body = await res.json();
+			const body = (await res.json()) as Array<{ repo_owner: string }>;
 			expect(body).toHaveLength(1);
 			expect(body[0].repo_owner).toBe("facebook");
 		});
@@ -375,7 +375,11 @@ describe("GET /api/dates", () => {
 
 		expect(res.status).toBe(200);
 		expect(res.headers.get("Content-Type")).toBe("application/json");
-		const body = await res.json();
+		const body = (await res.json()) as {
+			earliest: string | null;
+			latest: string | null;
+			dates: string[];
+		};
 		expect(body.earliest).toBe("2026-02-01");
 		expect(body.latest).toBe("2026-02-05");
 		expect(body.dates).toEqual(["2026-02-01", "2026-02-02", "2026-02-05"]);
@@ -388,7 +392,11 @@ describe("GET /api/dates", () => {
 		const res = await getDates(apiContext({ db }));
 
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as {
+			earliest: string | null;
+			latest: string | null;
+			dates: string[];
+		};
 		expect(body.earliest).toBeNull();
 		expect(body.latest).toBeNull();
 		expect(body.dates).toEqual([]);
@@ -399,7 +407,7 @@ describe("GET /api/dates", () => {
 		const res = await getDates(apiContext({ db }));
 
 		expect(res.status).toBe(500);
-		const body = await res.json();
+		const body = (await res.json()) as { error: string; detail: string };
 		expect(body.error).toBe("Database query failed");
 		expect(body.detail).toBe("DB unavailable");
 		expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -421,7 +429,7 @@ describe("GET /api/trending/week/[date]", () => {
 		it("returns 400 for invalid date format", async () => {
 			const res = await getWeeklyTrending(validationContext({ params: { date: "abc" } }));
 			expect(res.status).toBe(400);
-			expect((await res.json()).error).toContain("Invalid date format");
+			expect(((await res.json()) as { error: string }).error).toContain("Invalid date format");
 		});
 
 		it("returns 400 for missing date param", async () => {
@@ -481,7 +489,12 @@ describe("GET /api/trending/week/[date]", () => {
 			const { kv } = mockKV();
 			const res = await getWeeklyTrending(apiContext({ params: { date: PAST_WEEK_DATE }, db, kv }));
 
-			const body = await res.json();
+			const body = (await res.json()) as {
+				week_start: string;
+				week_end: string;
+				partial: boolean;
+				repos: Array<{ appearances: number }>;
+			};
 			expect(body.week_start).toBe("2026-01-26");
 			expect(body.week_end).toBe("2026-02-01");
 			expect(body).toHaveProperty("partial");
@@ -496,7 +509,7 @@ describe("GET /api/trending/week/[date]", () => {
 			const { kv } = mockKV();
 			const res = await getWeeklyTrending(apiContext({ params: { date: MOCK_TODAY }, db, kv }));
 
-			expect((await res.json()).partial).toBe(true);
+			expect(((await res.json()) as { partial: boolean }).partial).toBe(true);
 		});
 
 		it("sets partial=false when past week has 7 days of data", async () => {
@@ -504,7 +517,7 @@ describe("GET /api/trending/week/[date]", () => {
 			const { kv } = mockKV();
 			const res = await getWeeklyTrending(apiContext({ params: { date: PAST_WEEK_DATE }, db, kv }));
 
-			expect((await res.json()).partial).toBe(false);
+			expect(((await res.json()) as { partial: boolean }).partial).toBe(false);
 		});
 	});
 
@@ -515,7 +528,7 @@ describe("GET /api/trending/week/[date]", () => {
 			const res = await getWeeklyTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
 			expect(res.status).toBe(500);
-			expect((await res.json()).error).toBe("Database query failed");
+			expect(((await res.json()) as { error: string }).error).toBe("Database query failed");
 			expect(res.headers.get("Cache-Control")).toBe("no-store");
 		});
 	});
@@ -533,7 +546,7 @@ describe("GET /api/search", () => {
 			const res = await getSearch(apiContext({ db, url }));
 
 			expect(res.status).toBe(200);
-			const body = await res.json();
+			const body = (await res.json()) as { results: unknown[]; total: number; query: string };
 			expect(body.results).toEqual([]);
 			expect(body.total).toBe(0);
 			expect(body.query).toBe("a");
@@ -545,7 +558,7 @@ describe("GET /api/search", () => {
 			const res = await getSearch(apiContext({ db, url }));
 
 			expect(res.status).toBe(200);
-			expect((await res.json()).results).toEqual([]);
+			expect(((await res.json()) as { results: unknown[] }).results).toEqual([]);
 		});
 
 		it("returns 400 for query longer than 100 characters", async () => {
@@ -555,7 +568,7 @@ describe("GET /api/search", () => {
 			const res = await getSearch(apiContext({ db, url }));
 
 			expect(res.status).toBe(400);
-			expect((await res.json()).error).toContain("Query too long");
+			expect(((await res.json()) as { error: string }).error).toContain("Query too long");
 		});
 	});
 
@@ -570,7 +583,10 @@ describe("GET /api/search", () => {
 			const url = new URL("http://localhost/api/search?q=react");
 			const res = await getSearch(apiContext({ db, url }));
 
-			const body = await res.json();
+			const body = (await res.json()) as {
+				results: Array<{ repo_owner: string; repo_name: string; dates: string[] }>;
+				total: number;
+			};
 			expect(body.results).toHaveLength(1);
 			expect(body.results[0].repo_owner).toBe("facebook");
 			expect(body.results[0].repo_name).toBe("react");
@@ -594,7 +610,7 @@ describe("GET /api/search", () => {
 			const url = new URL("http://localhost/api/search?q=repo");
 			const res = await getSearch(apiContext({ db, url }));
 
-			const body = await res.json();
+			const body = (await res.json()) as { total: number; results: unknown[] };
 			expect(body.total).toBe(50);
 			expect(body.results).toHaveLength(50);
 		});
@@ -614,7 +630,7 @@ describe("GET /api/search", () => {
 			const res = await getSearch(apiContext({ db, url }));
 
 			expect(res.status).toBe(500);
-			expect((await res.json()).error).toBe("Database query failed");
+			expect(((await res.json()) as { error: string }).error).toBe("Database query failed");
 			expect(res.headers.get("Cache-Control")).toBe("no-store");
 		});
 	});
@@ -631,7 +647,7 @@ describe("GET /api/compare", () => {
 				validationContext({ url: new URL("http://localhost/api/compare?date2=2026-02-05") }),
 			);
 			expect(res.status).toBe(400);
-			expect((await res.json()).error).toContain("Both date1 and date2");
+			expect(((await res.json()) as { error: string }).error).toContain("Both date1 and date2");
 		});
 
 		it("returns 400 when date2 is missing", async () => {
@@ -657,7 +673,7 @@ describe("GET /api/compare", () => {
 				}),
 			);
 			expect(res.status).toBe(400);
-			expect((await res.json()).error).toContain("must be different");
+			expect(((await res.json()) as { error: string }).error).toContain("must be different");
 		});
 	});
 
@@ -677,7 +693,13 @@ describe("GET /api/compare", () => {
 			const res = await getCompare(apiContext({ db, url }));
 
 			expect(res.status).toBe(200);
-			const body = await res.json();
+			const body = (await res.json()) as {
+				date1_repos: unknown[];
+				date2_repos: unknown[];
+				common: Array<{ repo_owner: string }>;
+				only_date1: Array<{ repo_name: string }>;
+				only_date2: Array<{ repo_name: string }>;
+			};
 			expect(body.date1_repos).toHaveLength(2);
 			expect(body.date2_repos).toHaveLength(2);
 			expect(body.common).toHaveLength(1);
@@ -713,7 +735,7 @@ describe("GET /api/compare", () => {
 			const res = await getCompare(apiContext({ db, url }));
 
 			expect(res.status).toBe(500);
-			expect((await res.json()).error).toBe("Database query failed");
+			expect(((await res.json()) as { error: string }).error).toBe("Database query failed");
 			expect(res.headers.get("Cache-Control")).toBe("no-store");
 		});
 	});
@@ -752,7 +774,7 @@ describe("GET /api/languages/[date]", () => {
 		const res = await getLanguages(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Array<{ language: string }>;
 		expect(body).toHaveLength(2);
 		expect(body[0].language).toBe("JavaScript");
 		expect(body[0]).toHaveProperty("percentage");
@@ -765,7 +787,7 @@ describe("GET /api/languages/[date]", () => {
 		const res = await getLanguages(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
 		expect(res.status).toBe(500);
-		expect((await res.json()).error).toBe("Database query failed");
+		expect(((await res.json()) as { error: string }).error).toBe("Database query failed");
 		expect(res.headers.get("Cache-Control")).toBe("no-store");
 	});
 });
@@ -804,7 +826,7 @@ describe("GET /api/languages/week/[date]", () => {
 		const res = await getWeeklyLanguages(apiContext({ params: { date: PAST_WEEK_DATE }, db, kv }));
 
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const body = (await res.json()) as Array<{ language: string }>;
 		expect(body).toHaveLength(2);
 		expect(body[0].language).toBe("TypeScript");
 		expect(puts[0].key).toBe("languages:week:2026-01-26");
@@ -816,7 +838,7 @@ describe("GET /api/languages/week/[date]", () => {
 		const res = await getWeeklyLanguages(apiContext({ params: { date: PAST_WEEK_DATE }, db, kv }));
 
 		expect(res.status).toBe(500);
-		expect((await res.json()).error).toBe("Database query failed");
+		expect(((await res.json()) as { error: string }).error).toBe("Database query failed");
 		expect(res.headers.get("Cache-Control")).toBe("no-store");
 	});
 });
