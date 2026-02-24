@@ -32,7 +32,7 @@
 		}
 	],
 	"triggers": {
-		"crons": ["0 6,12,18 * * *"]
+		"crons": ["0 6,18 * * *"]
 	}
 	/**
 	 * Smart Placement

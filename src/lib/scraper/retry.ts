@@ -2,7 +2,7 @@ import { todayUTC } from "../dates";
 import { logError, logInfo, logWarn } from "../log";
 import { runScrapePipeline, type ScrapeResult } from "./pipeline";
 
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 2;
 const RETRY_KV_PREFIX = "scrape_retry:";
 /** TTL for retry count keys: 48 hours in seconds. */
 const RETRY_TTL_SECONDS = 48 * 60 * 60;
@@ -49,7 +49,7 @@ export interface RetryAwareScrapeResult extends ScrapeResult {
  * Because GitHub's trending page only shows the current day's data (there is
  * no historical API), retries are only meaningful within the same UTC day.
  * The cron should be configured to fire multiple times per day (e.g.,
- * `0 6,12,18 * * *`) so that same-day retries are actually triggered.
+ * `0 6,18 * * *`) so that same-day retries are actually triggered.
  * Cross-day recovery is not possible — a missed day becomes a confirmed gap.
  *
  * Flow:

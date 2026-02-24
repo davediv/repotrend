@@ -496,7 +496,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 
 		it("stops retrying after max attempts", async () => {
 			const { db } = mockDB({ firstResult: null });
-			const { kv } = mockKV({ [`scrape_retry:${MOCK_TODAY}`]: "3" });
+			const { kv } = mockKV({ [`scrape_retry:${MOCK_TODAY}`]: "2" });
 
 			const result = await runScrapeWithRetry(db, kv);
 
@@ -574,7 +574,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 
 		it("returns 500 when max retries exceeded", async () => {
 			const { db } = mockDB({ firstResult: null });
-			const { kv } = mockKV({ [`scrape_retry:${MOCK_TODAY}`]: "3" });
+			const { kv } = mockKV({ [`scrape_retry:${MOCK_TODAY}`]: "2" });
 
 			const request = new Request("http://localhost/api/cron", {
 				headers: { "X-Cron-Source": "scheduled" },
