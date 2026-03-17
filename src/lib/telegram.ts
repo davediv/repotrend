@@ -34,7 +34,13 @@ export function getTelegramConfig(env: {
  * Uses HTML parse mode — callers must ensure `text` is properly HTML-escaped.
  * Throws on network or API error.
  */
+const BOT_TOKEN_RE = /^[0-9]+:[A-Za-z0-9_-]{35}$/;
+
 export async function sendTelegramMessage(config: TelegramConfig, text: string): Promise<void> {
+	if (!BOT_TOKEN_RE.test(config.botToken)) {
+		throw new Error("Invalid Telegram bot token format");
+	}
+
 	const url = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
 
 	const body: Record<string, unknown> = {
@@ -55,8 +61,7 @@ export async function sendTelegramMessage(config: TelegramConfig, text: string):
 	});
 
 	if (!response.ok) {
-		const detail = await response.text().catch(() => response.statusText);
-		throw new Error(`Telegram API error ${response.status}: ${detail}`);
+		throw new Error(`Telegram API error: HTTP ${response.status}`);
 	}
 }
 

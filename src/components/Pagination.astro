@@ -24,23 +24,20 @@ function pageHref(page: number): string {
 	}
 	return `${url.pathname}${url.search}#results`;
 }
-
-const chevronLeft = `<polyline points="15 18 9 12 15 6"></polyline>`;
-const chevronRight = `<polyline points="9 18 15 12 9 6"></polyline>`;
 ---
 
 <nav class="pagination" aria-label="Pagination">
 	{currentPage > 1 ? (
 		<a href={pageHref(currentPage - 1)} class="pagination-btn pagination-prev" aria-label="Go to previous page">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-				<Fragment set:html={chevronLeft} />
+				<polyline points="15 18 9 12 15 6"></polyline>
 			</svg>
 			Previous
 		</a>
 	) : (
 		<span class="pagination-btn pagination-prev disabled" aria-disabled="true">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-				<Fragment set:html={chevronLeft} />
+				<polyline points="15 18 9 12 15 6"></polyline>
 			</svg>
 			Previous
 		</span>
@@ -66,14 +63,14 @@ const chevronRight = `<polyline points="9 18 15 12 9 6"></polyline>`;
 		<a href={pageHref(currentPage + 1)} class="pagination-btn pagination-next" aria-label="Go to next page">
 			Next
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-				<Fragment set:html={chevronRight} />
+				<polyline points="9 18 15 12 9 6"></polyline>
 			</svg>
 		</a>
 	) : (
 		<span class="pagination-btn pagination-next disabled" aria-disabled="true">
 			Next
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-				<Fragment set:html={chevronRight} />
+				<polyline points="9 18 15 12 9 6"></polyline>
 			</svg>
 		</span>
 	)}

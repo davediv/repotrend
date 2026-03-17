@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			JSON.stringify({
 				error: "Both date1 and date2 query parameters are required in YYYY-MM-DD format.",
 			}),
-			{ status: 400, headers: { "Content-Type": "application/json" } },
+			{ status: 400, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
 		);
 	}
 
@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			JSON.stringify({
 				error: "date1 and date2 must be different dates.",
 			}),
-			{ status: 400, headers: { "Content-Type": "application/json" } },
+			{ status: 400, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
 		);
 	}
 
@@ -38,8 +38,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 		]);
 	} catch (error) {
 		logError("compare_query_error", { date1, date2 })(error);
-		const message = error instanceof Error ? error.message : String(error);
-		return new Response(JSON.stringify({ error: "Database query failed", detail: message }), {
+		return new Response(JSON.stringify({ error: "Database query failed" }), {
 			status: 500,
 			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});

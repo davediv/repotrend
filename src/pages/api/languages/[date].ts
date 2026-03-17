@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	if (!date || !isValidDate(date)) {
 		return new Response(JSON.stringify({ error: "Invalid date format. Expected YYYY-MM-DD." }), {
 			status: 400,
-			headers: { "Content-Type": "application/json" },
+			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});
 	}
 
@@ -59,8 +59,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		results = await getLanguageDistribution(db, date);
 	} catch (error) {
 		logError("languages_query_error", { date })(error);
-		const message = error instanceof Error ? error.message : String(error);
-		return new Response(JSON.stringify({ error: "Database query failed", detail: message }), {
+		return new Response(JSON.stringify({ error: "Database query failed" }), {
 			status: 500,
 			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});

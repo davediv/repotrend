@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { logError } from "../../lib/log";
 
 export const prerender = false;
 
@@ -15,8 +16,8 @@ export const GET: APIRoute = async ({ locals }) => {
 			)
 			.all<{ trending_date: string }>());
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		return new Response(JSON.stringify({ error: "Database query failed", detail: message }), {
+		logError("dates_query_error")(error);
+		return new Response(JSON.stringify({ error: "Database query failed" }), {
 			status: 500,
 			headers: {
 				"Content-Type": "application/json",

@@ -1,29 +1,62 @@
 import { defineMiddleware } from "astro:middleware";
 import { logError } from "./lib/log";
 
+/** Security headers applied to every response. */
+const SECURITY_HEADERS: Record<string, string> = {
+	"X-Content-Type-Options": "nosniff",
+	"X-Frame-Options": "DENY",
+	"Referrer-Policy": "strict-origin-when-cross-origin",
+	"Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+	"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+	"Content-Security-Policy": [
+		"default-src 'self'",
+		"script-src 'self' 'unsafe-inline'",
+		"style-src 'self' 'unsafe-inline'",
+		"img-src 'self' data:",
+		"connect-src 'self'",
+		"font-src 'self'",
+		"frame-ancestors 'none'",
+		"base-uri 'self'",
+		"form-action 'self'",
+	].join("; "),
+};
+
+function applySecurityHeaders(response: Response): void {
+	for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+		response.headers.set(key, value);
+	}
+}
+
 /**
  * Global error boundary middleware.
  * Catches unhandled rendering errors and returns a styled fallback page
  * instead of exposing raw error details or a blank screen.
+ * Also applies security headers to every response.
  */
 export const onRequest = defineMiddleware(async (context, next) => {
 	try {
-		return await next();
+		const response = await next();
+		applySecurityHeaders(response);
+		return response;
 	} catch (error) {
 		logError("unhandled_render_error")(error);
 
 		// Return JSON for API routes, HTML for everything else.
 		if (context.url.pathname.startsWith("/api/")) {
-			return new Response(JSON.stringify({ error: "Internal server error" }), {
+			const response = new Response(JSON.stringify({ error: "Internal server error" }), {
 				status: 500,
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 			});
+			applySecurityHeaders(response);
+			return response;
 		}
 
-		return new Response(errorPageHTML, {
+		const response = new Response(errorPageHTML, {
 			status: 500,
 			headers: { "Content-Type": "text/html; charset=utf-8" },
 		});
+		applySecurityHeaders(response);
+		return response;
 	}
 });
 

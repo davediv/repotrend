@@ -53,7 +53,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			JSON.stringify({ error: `Query too long. Maximum ${MAX_QUERY_LENGTH} characters.` }),
 			{
 				status: 400,
-				headers: { "Content-Type": "application/json" },
+				headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 			},
 		);
 	}
@@ -99,9 +99,8 @@ export const GET: APIRoute = async ({ url, locals }) => {
 			.bind(likePattern, query, startsWithPattern, SQL_ROW_LIMIT)
 			.all<SearchRow>());
 	} catch (error) {
-		logError("search_query_error", { query })(error);
-		const message = error instanceof Error ? error.message : String(error);
-		return new Response(JSON.stringify({ error: "Database query failed", detail: message }), {
+		logError("search_query_error", { queryLength: query.length })(error);
+		return new Response(JSON.stringify({ error: "Database query failed" }), {
 			status: 500,
 			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});
