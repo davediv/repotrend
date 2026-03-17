@@ -1,7 +1,6 @@
 const TRENDING_URL = "https://github.com/trending?spoken_language_code=en";
 
-const USER_AGENT =
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const USER_AGENT = "RepoTrend/1.0 (+https://repotrend.dev)";
 
 const TIMEOUT_MS = 30_000;
 
@@ -45,6 +44,9 @@ export async function fetchTrendingPage(): Promise<string> {
  * Used to add jitter before requests to avoid rate limiting.
  */
 export function randomDelay(minMs = 1000, maxMs = 3000): Promise<void> {
-	const ms = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+	const range = maxMs - minMs + 1;
+	const array = new Uint32Array(1);
+	crypto.getRandomValues(array);
+	const ms = minMs + (array[0] % range);
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }

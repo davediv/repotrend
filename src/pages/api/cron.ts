@@ -12,14 +12,21 @@ import { getTrendingRepos } from "../../lib/trending";
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-	if (request.headers.get("X-Cron-Source") !== "scheduled") {
+	const env = locals.runtime.env;
+	const cronSecret = env.CRON_SECRET;
+
+	// Validate cron requests using a shared secret (CRON_SECRET).
+	// The X-Cron-Source header alone is spoofable by any external caller.
+	if (
+		request.headers.get("X-Cron-Source") !== "scheduled" ||
+		!cronSecret ||
+		request.headers.get("X-Cron-Secret") !== cronSecret
+	) {
 		return new Response(JSON.stringify({ error: "Forbidden" }), {
 			status: 403,
-			headers: { "Content-Type": "application/json" },
+			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});
 	}
-
-	const env = locals.runtime.env;
 	const telegramConfig = getTelegramConfig(env);
 
 	try {

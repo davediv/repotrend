@@ -34,7 +34,7 @@ const _scheduledWorker = {
     try {
       const response = await _scheduledWorker.fetch(
         new Request("http://trigger.internal/api/cron", {
-          headers: { "X-Cron-Source": "scheduled" },
+          headers: { "X-Cron-Source": "scheduled", "X-Cron-Secret": env.CRON_SECRET || "" },
         }),
         env,
         ctx,

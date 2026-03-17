@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getMondayOfWeek, getSundayOfWeek, isValidDate, todayUTC } from "../../../../lib/dates";
+import { logError } from "../../../../lib/log";
 import { getWeeklyTrendingRepos, type WeeklyTrendingResponse } from "../../../../lib/trending";
 
 export const prerender = false;
@@ -13,7 +14,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	if (!date || !isValidDate(date)) {
 		return new Response(JSON.stringify({ error: "Invalid date format. Expected YYYY-MM-DD." }), {
 			status: 400,
-			headers: { "Content-Type": "application/json" },
+			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});
 	}
 
@@ -64,8 +65,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		repos = result.repos;
 		daysWithData = result.daysWithData;
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		return new Response(JSON.stringify({ error: "Database query failed", detail: message }), {
+		logError("weekly_trending_query_error", { weekStart })(error);
+		return new Response(JSON.stringify({ error: "Database query failed" }), {
 			status: 500,
 			headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
 		});
