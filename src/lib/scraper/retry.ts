@@ -48,8 +48,8 @@ export interface RetryAwareScrapeResult extends ScrapeResult {
  *
  * Because GitHub's trending page only shows the current day's data (there is
  * no historical API), retries are only meaningful within the same UTC day.
- * The cron should be configured to fire multiple times per day (e.g.,
- * `0 6,18 * * *`) so that same-day retries are actually triggered.
+ * If the scheduled job runs once per day, automatic same-day retries will only
+ * happen when this endpoint is triggered manually again on the same date.
  * Cross-day recovery is not possible — a missed day becomes a confirmed gap.
  *
  * Flow:

@@ -332,9 +332,8 @@ describe("GET /api/trending/[date]", () => {
 			const res = await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
 			expect(res.status).toBe(500);
-			const body = (await res.json()) as { error: string; detail: string };
+			const body = (await res.json()) as { error: string };
 			expect(body.error).toBe("Database query failed");
-			expect(body.detail).toBe("D1 timeout");
 			expect(res.headers.get("Cache-Control")).toBe("no-store");
 		});
 
@@ -407,9 +406,8 @@ describe("GET /api/dates", () => {
 		const res = await getDates(apiContext({ db }));
 
 		expect(res.status).toBe(500);
-		const body = (await res.json()) as { error: string; detail: string };
+		const body = (await res.json()) as { error: string };
 		expect(body.error).toBe("Database query failed");
-		expect(body.detail).toBe("DB unavailable");
 		expect(res.headers.get("Cache-Control")).toBe("no-store");
 	});
 

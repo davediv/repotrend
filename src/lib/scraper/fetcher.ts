@@ -1,4 +1,4 @@
-const TRENDING_URL = "https://github.com/trending?spoken_language_code=en";
+const TRENDING_URL = "https://github.com/trending";
 
 const USER_AGENT = "RepoTrend/1.0 (+https://repotrend.dev)";
 

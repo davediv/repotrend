@@ -6,5 +6,5 @@ RepoTrend is a web app that archives and displays daily GitHub trending reposito
 - Cloudflare Workers (Cron)
 - Cloudflare D1/KV
 
-Language Scope: English only
+Language Scope: GitHub Trending default (Any spoken language)
 All programming languages shown by default

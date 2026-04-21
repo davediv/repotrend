@@ -161,6 +161,7 @@ function apiContext({
 			runtime: {
 				env: {
 					DB: db,
+					CRON_SECRET: "test-cron-secret",
 					...(kv ? { CACHE: kv } : {}),
 				},
 			},
@@ -548,7 +549,10 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const { kv } = mockKV();
 
 			const request = new Request("http://localhost/api/cron", {
-				headers: { "X-Cron-Source": "scheduled" },
+				headers: {
+					"X-Cron-Source": "scheduled",
+					"X-Cron-Secret": "test-cron-secret",
+				},
 			});
 			const res = await getCron(apiContext({ db, kv, request }));
 
@@ -563,7 +567,10 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const { kv } = mockKV();
 
 			const request = new Request("http://localhost/api/cron", {
-				headers: { "X-Cron-Source": "scheduled" },
+				headers: {
+					"X-Cron-Source": "scheduled",
+					"X-Cron-Secret": "test-cron-secret",
+				},
 			});
 			const res = await getCron(apiContext({ db, kv, request }));
 
@@ -577,7 +584,10 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const { kv } = mockKV({ [`scrape_retry:${MOCK_TODAY}`]: "2" });
 
 			const request = new Request("http://localhost/api/cron", {
-				headers: { "X-Cron-Source": "scheduled" },
+				headers: {
+					"X-Cron-Source": "scheduled",
+					"X-Cron-Secret": "test-cron-secret",
+				},
 			});
 			const res = await getCron(apiContext({ db, kv, request }));
 
