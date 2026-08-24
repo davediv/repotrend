@@ -37,17 +37,14 @@ let dateCounts: DateRepoCount[] = [];
 let hasError = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
-	repos = sortDailyRepos(await getTrendingReposWithStreaks(db, date), sort);
-	try {
-		languages = await getLanguageDistribution(db, date);
-	} catch {
-		// Non-fatal: page renders without language chart
-	}
-	try {
-		dateCounts = await getDateRepoCounts(db);
-	} catch {
-		// Non-fatal: page renders without heatmap
-	}
+	const [trendingRepos, languageResult, dateCountResult] = await Promise.all([
+		getTrendingReposWithStreaks(db, date),
+		getLanguageDistribution(db, date).catch(() => []),
+		getDateRepoCounts(db).catch(() => []),
+	]);
+	repos = sortDailyRepos(trendingRepos, sort);
+	languages = languageResult;
+	dateCounts = dateCountResult;
 } catch (error) {
 	hasError = true;
 	logError("trending_date_ssr_error", { date })(error);
@@ -59,7 +56,11 @@ try {
 	description={`GitHub trending repositories for ${displayDate}. Browse the most popular open-source projects that trended on ${displayDate}.`}
 >
 	<Toolbar>
-		<DatePicker selectedDate={date} viewMode="daily" />
+		<DatePicker
+			selectedDate={date}
+			viewMode="daily"
+			availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
+		/>
 		<ViewToggle activeView="daily" currentDate={date} />
 		<SortDropdown activeSort={sort} />
 	</Toolbar>

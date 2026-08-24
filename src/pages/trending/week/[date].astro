@@ -54,21 +54,17 @@ let partial = false;
 let hasError = false;
 try {
 	const db = Astro.locals.runtime.env.DB;
-	const result = await getWeeklyTrendingRepos(db, monday, weekEnd);
+	const [result, languageResult, dateCountResult] = await Promise.all([
+		getWeeklyTrendingRepos(db, monday, weekEnd),
+		getWeeklyLanguageDistribution(db, monday, weekEnd).catch(() => []),
+		getDateRepoCounts(db).catch(() => []),
+	]);
 	allRepos = sortWeeklyRepos(result.repos, sort);
 	const today = todayUTC();
 	const weekNotFinished = weekEnd > today;
 	partial = weekNotFinished || result.daysWithData < 7;
-	try {
-		languages = await getWeeklyLanguageDistribution(db, monday, weekEnd);
-	} catch {
-		// Non-fatal: page renders without language chart
-	}
-	try {
-		dateCounts = await getDateRepoCounts(db);
-	} catch {
-		// Non-fatal: page renders without heatmap
-	}
+	languages = languageResult;
+	dateCounts = dateCountResult;
 } catch (error) {
 	hasError = true;
 	logError("trending_week_ssr_error", { date })(error);
@@ -85,7 +81,11 @@ const repos = allRepos.slice(paginationInfo.startIndex, paginationInfo.endIndex)
 	description={`Weekly GitHub trending repositories for ${weekLabel}. Browse the most popular open-source projects from the week of ${weekLabel}.`}
 >
 	<Toolbar>
-		<DatePicker selectedDate={date} viewMode="weekly" />
+		<DatePicker
+			selectedDate={date}
+			viewMode="weekly"
+			availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
+		/>
 		<ViewToggle activeView="weekly" currentDate={date} />
 		<SortDropdown activeSort={sort} viewMode="weekly" />
 	</Toolbar>

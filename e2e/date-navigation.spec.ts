@@ -14,9 +14,22 @@ test.describe("Date Navigation", () => {
 		await expect(dateDisplay).toContainText("February 12, 2026");
 	});
 
+	test("initializes navigation from SSR data without refetching archive dates", async ({
+		page,
+	}) => {
+		let dateApiRequests = 0;
+		page.on("request", (request) => {
+			if (new URL(request.url()).pathname === "/api/dates") dateApiRequests++;
+		});
+
+		await page.goto("/trending/2026-02-12");
+		await expect(page.locator('.date-nav-btn[data-action="prev"]')).toBeEnabled();
+		expect(dateApiRequests).toBe(0);
+	});
+
 	test("previous button navigates to earlier date", async ({ page }) => {
 		await page.goto("/trending/2026-02-15");
-		// Wait for /api/dates to load so buttons become enabled
+		// The SSR-provided archive dates enable navigation without another request.
 		const prevBtn = page.locator('.date-nav-btn[data-action="prev"]');
 		await expect(prevBtn).toBeEnabled({ timeout: 5000 });
 		await prevBtn.click();
@@ -26,7 +39,7 @@ test.describe("Date Navigation", () => {
 
 	test("next button navigates to later date", async ({ page }) => {
 		await page.goto("/trending/2026-02-09");
-		// Wait for /api/dates to load so buttons become enabled
+		// The SSR-provided archive dates enable navigation without another request.
 		const nextBtn = page.locator('.date-nav-btn[data-action="next"]');
 		await expect(nextBtn).toBeEnabled({ timeout: 5000 });
 		await nextBtn.click();

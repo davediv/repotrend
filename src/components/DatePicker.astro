@@ -4,9 +4,11 @@ import { formatDateDisplay, formatWeekRange, getSundayOfWeek, todayUTC } from ".
 interface Props {
 	selectedDate?: string;
 	viewMode?: "daily" | "weekly";
+	/** Chronological archive dates already loaded by the SSR page. */
+	availableDates?: string[];
 }
 
-const { selectedDate, viewMode = "daily" } = Astro.props;
+const { selectedDate, viewMode = "daily", availableDates } = Astro.props;
 
 const currentDate = selectedDate || todayUTC();
 const displayText =
@@ -21,6 +23,7 @@ const datetimeAttr =
 	aria-label="Date navigation"
 	data-selected-date={currentDate}
 	data-view-mode={viewMode}
+	data-available-dates={availableDates ? JSON.stringify(availableDates) : undefined}
 >
 	<button
 		class="date-nav-btn"
@@ -127,7 +130,24 @@ const datetimeAttr =
 			this.dateInput = container.querySelector(".date-input-hidden")!;
 
 			this.bindEvents();
-			this.fetchDateRange();
+			if (!this.loadEmbeddedDates(container.dataset.availableDates)) {
+				this.fetchDateRange();
+			}
+		}
+
+		private loadEmbeddedDates(serializedDates: string | undefined): boolean {
+			if (!serializedDates) return false;
+
+			try {
+				const dates: unknown = JSON.parse(serializedDates);
+				if (!Array.isArray(dates) || !dates.every((date) => typeof date === "string")) {
+					return false;
+				}
+				this.setAvailableDates(dates);
+				return true;
+			} catch {
+				return false;
+			}
 		}
 
 		private bindEvents(): void {
@@ -167,21 +187,21 @@ const datetimeAttr =
 				const data: { earliest: string | null; latest: string | null; dates: string[] } =
 					await response.json();
 
-				this.availableDates = data.dates;
-
-				if (data.earliest) {
-					this.dateInput.min = data.earliest;
-				}
-				if (data.latest) {
-					this.dateInput.max = data.latest;
-				}
-
-				this.updateButtonStates();
+				this.setAvailableDates(data.dates);
 			} catch {
 				// On failure, enable buttons as a fallback so navigation isn't stuck
 				this.prevBtn.disabled = false;
 				this.nextBtn.disabled = false;
 			}
+		}
+
+		private setAvailableDates(dates: string[]): void {
+			this.availableDates = dates;
+			const earliest = dates[0];
+			const latest = dates[dates.length - 1];
+			if (earliest) this.dateInput.min = earliest;
+			if (latest) this.dateInput.max = latest;
+			this.updateButtonStates();
 		}
 
 		private navigate(direction: number): void {

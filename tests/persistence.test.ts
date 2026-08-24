@@ -9,6 +9,7 @@ import {
 	getDateRepoCounts,
 	getLanguageDistribution,
 	getTrendingRepos,
+	getTrendingReposWithStreaks,
 	getWeeklyLanguageDistribution,
 	getWeeklyTrendingRepos,
 	type TrendingRepo,
@@ -50,7 +51,7 @@ function sampleTrendingRepo(overrides: Partial<TrendingRepo> = {}): TrendingRepo
 function mockDB(
 	config: {
 		queryResults?: unknown[];
-		batchResults?: Array<{ success: boolean; meta: { changes?: number } }>;
+		batchResults?: Array<{ results?: unknown[]; success: boolean; meta: { changes?: number } }>;
 		batchError?: Error;
 	} = {},
 ) {
@@ -86,7 +87,10 @@ function mockDB(
 		async batch(stmts: unknown[]) {
 			calls.batchCount++;
 			if (config.batchError) throw config.batchError;
-			return config.batchResults ?? stmts.map(() => ({ success: true, meta: { changes: 1 } }));
+			return (
+				config.batchResults ??
+				stmts.map(() => ({ results: [], success: true, meta: { changes: 1 } }))
+			);
 		},
 	} as unknown as D1Database;
 
@@ -375,6 +379,79 @@ describe("calculateStreaks", () => {
 		expect(calls.bind[0][0]).toBe(TEST_DATE);
 		expect(calls.bind[0][1]).toBe(TEST_DATE);
 		expect(calls.bind[0][2]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+	});
+});
+
+// ── getTrendingReposWithStreaks ──────────────────────────────────────
+
+describe("getTrendingReposWithStreaks", () => {
+	it("fetches all enrichment data in one D1 batch", async () => {
+		const { db, calls } = mockDB({
+			queryResults: [sampleTrendingRepo()],
+			batchResults: [
+				{
+					results: [{ repo_owner: "facebook", repo_name: "react", trending_date: TEST_DATE }],
+					success: true,
+					meta: {},
+				},
+				{
+					results: [{ repo_owner: "facebook", repo_name: "react" }],
+					success: true,
+					meta: {},
+				},
+				{
+					results: [
+						{
+							repo_owner: "facebook",
+							repo_name: "react",
+							date: "2026-02-14",
+							stars_today: 400,
+						},
+						{
+							repo_owner: "facebook",
+							repo_name: "react",
+							date: TEST_DATE,
+							stars_today: 500,
+						},
+					],
+					success: true,
+					meta: {},
+				},
+			],
+		});
+
+		const repos = await getTrendingReposWithStreaks(db, TEST_DATE);
+
+		expect(calls.batchCount).toBe(1);
+		expect(repos[0]).toMatchObject({
+			streak: 1,
+			is_new_entry: true,
+			star_history: [
+				{ date: "2026-02-14", stars_today: 400 },
+				{ date: TEST_DATE, stars_today: 500 },
+			],
+		});
+	});
+
+	it("skips the enrichment batch when the date has no repos", async () => {
+		const { db, calls } = mockDB({ queryResults: [] });
+
+		expect(await getTrendingReposWithStreaks(db, TEST_DATE)).toEqual([]);
+		expect(calls.batchCount).toBe(0);
+	});
+
+	it("falls back to best-effort individual enrichment when batching fails", async () => {
+		const { db, calls } = mockDB({
+			queryResults: [sampleTrendingRepo()],
+			batchError: new Error("D1 batch unavailable"),
+		});
+
+		const repos = await getTrendingReposWithStreaks(db, TEST_DATE);
+
+		expect(calls.batchCount).toBe(1);
+		expect(calls.prepare).toHaveLength(7);
+		expect(repos).toHaveLength(1);
+		expect(repos[0].repo_owner).toBe("facebook");
 	});
 });
 

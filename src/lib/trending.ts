@@ -133,6 +133,19 @@ export interface StarHistoryPoint {
 	stars_today: number;
 }
 
+interface StreakRow {
+	repo_owner: string;
+	repo_name: string;
+	trending_date: string;
+}
+
+interface RepoIdentityRow {
+	repo_owner: string;
+	repo_name: string;
+}
+
+interface StarHistoryRow extends RepoIdentityRow, StarHistoryPoint {}
+
 /** Shape of a trending repo row from D1 (display-relevant fields). */
 export interface TrendingRepo {
 	repo_owner: string;
@@ -293,21 +306,44 @@ export async function getTrendingReposWithStreaks(
 ): Promise<TrendingRepo[]> {
 	const repos = await getTrendingRepos(db, date);
 	try {
-		await calculateStreaks(db, date, repos);
+		await enrichTrendingReposInBatch(db, date, repos);
 	} catch {
-		// Non-fatal: repos are still valid without streaks
-	}
-	try {
-		await detectNewEntries(db, date, repos);
-	} catch {
-		// Non-fatal: repos are still valid without new-entry flags
-	}
-	try {
-		await fetchStarHistory(db, date, repos);
-	} catch {
-		// Non-fatal: repos are still valid without star history
+		// Preserve best-effort enrichment if one statement cannot be batched. The
+		// independent fallbacks may still populate the fields whose queries work.
+		await Promise.allSettled([
+			calculateStreaks(db, date, repos),
+			detectNewEntries(db, date, repos),
+			fetchStarHistory(db, date, repos),
+		]);
 	}
 	return repos;
+}
+
+/**
+ * Fetch all independent daily enrichments in one D1 round trip.
+ * D1 executes the statements sequentially and returns results in input order;
+ * batching removes three separate Worker-to-D1 request round trips.
+ */
+async function enrichTrendingReposInBatch(
+	db: D1Database,
+	date: string,
+	repos: TrendingRepo[],
+): Promise<void> {
+	if (repos.length === 0) return;
+
+	const results = await db.batch<StreakRow | RepoIdentityRow | StarHistoryRow>([
+		prepareStreakQuery(db, date),
+		prepareNewEntriesQuery(db, date),
+		prepareStarHistoryQuery(db, date),
+	]);
+
+	if (results.length !== 3 || results.some((result) => !result.success)) {
+		throw new Error("D1 enrichment batch failed");
+	}
+
+	applyStreakRows(repos, results[0].results as StreakRow[], date);
+	applyNewEntryRows(repos, results[1].results as RepoIdentityRow[]);
+	applyStarHistoryRows(repos, results[2].results as StarHistoryRow[]);
 }
 
 /**
@@ -329,9 +365,13 @@ export async function fetchStarHistory(
 ): Promise<void> {
 	if (repos.length === 0) return;
 
-	const lookbackDate = daysAgo(date, STAR_HISTORY_LOOKBACK_DAYS);
+	const { results } = await prepareStarHistoryQuery(db, date).all<StarHistoryRow>();
+	applyStarHistoryRows(repos, results);
+}
 
-	const { results } = await db
+function prepareStarHistoryQuery(db: D1Database, date: string): D1PreparedStatement {
+	const lookbackDate = daysAgo(date, STAR_HISTORY_LOOKBACK_DAYS);
+	return db
 		.prepare(
 			`SELECT h.repo_owner, h.repo_name, h.trending_date AS date, h.stars_today
 			   FROM trending_repos h
@@ -341,12 +381,13 @@ export async function fetchStarHistory(
 			    AND h.trending_date >= ?
 			  ORDER BY h.repo_owner, h.repo_name, h.trending_date ASC`,
 		)
-		.bind(date, lookbackDate)
-		.all<{ repo_owner: string; repo_name: string; date: string; stars_today: number }>();
+		.bind(date, lookbackDate);
+}
 
+function applyStarHistoryRows(repos: TrendingRepo[], rows: StarHistoryRow[]): void {
 	// Group history points by repo key
 	const historyByRepo = new Map<string, StarHistoryPoint[]>();
-	for (const row of results) {
+	for (const row of rows) {
 		const key = `${row.repo_owner}/${row.repo_name}`;
 		let points = historyByRepo.get(key);
 		if (!points) {
@@ -383,12 +424,13 @@ export async function calculateStreaks(
 ): Promise<void> {
 	if (repos.length === 0) return;
 
-	const lookbackDate = daysAgo(date, STREAK_LOOKBACK_DAYS);
+	const { results } = await prepareStreakQuery(db, date).all<StreakRow>();
+	applyStreakRows(repos, results, date);
+}
 
-	// Fetch appearance dates for all repos trending on `date`, looking back up to
-	// STREAK_LOOKBACK_DAYS. The INNER JOIN limits history rows to only the repos
-	// present on the target date.
-	const { results } = await db
+function prepareStreakQuery(db: D1Database, date: string): D1PreparedStatement {
+	const lookbackDate = daysAgo(date, STREAK_LOOKBACK_DAYS);
+	return db
 		.prepare(
 			`SELECT h.repo_owner, h.repo_name, h.trending_date
 			   FROM trending_repos h
@@ -399,12 +441,13 @@ export async function calculateStreaks(
 			    AND h.trending_date >= ?
 			  ORDER BY h.repo_owner, h.repo_name, h.trending_date DESC`,
 		)
-		.bind(date, date, lookbackDate)
-		.all<{ repo_owner: string; repo_name: string; trending_date: string }>();
+		.bind(date, date, lookbackDate);
+}
 
+function applyStreakRows(repos: TrendingRepo[], rows: StreakRow[], date: string): void {
 	// Group appearance dates by repo key
 	const datesByRepo = new Map<string, string[]>();
-	for (const row of results) {
+	for (const row of rows) {
 		const key = `${row.repo_owner}/${row.repo_name}`;
 		let dates = datesByRepo.get(key);
 		if (!dates) {
@@ -441,7 +484,12 @@ export async function detectNewEntries(
 ): Promise<void> {
 	if (repos.length === 0) return;
 
-	const { results } = await db
+	const { results } = await prepareNewEntriesQuery(db, date).all<RepoIdentityRow>();
+	applyNewEntryRows(repos, results);
+}
+
+function prepareNewEntriesQuery(db: D1Database, date: string): D1PreparedStatement {
+	return db
 		.prepare(
 			`SELECT repo_owner, repo_name
 			   FROM trending_repos
@@ -453,11 +501,12 @@ export async function detectNewEntries(
 			           AND h.trending_date < ?
 			    )`,
 		)
-		.bind(date, date)
-		.all<{ repo_owner: string; repo_name: string }>();
+		.bind(date, date);
+}
 
+function applyNewEntryRows(repos: TrendingRepo[], rows: RepoIdentityRow[]): void {
 	const newEntries = new Set<string>();
-	for (const row of results) {
+	for (const row of rows) {
 		newEntries.add(`${row.repo_owner}/${row.repo_name}`);
 	}
 

@@ -46,17 +46,14 @@ try {
 		effectiveDate = results[0].trending_date;
 	}
 
-	repos = sortDailyRepos(await getTrendingReposWithStreaks(db, effectiveDate), sort);
-	try {
-		languages = await getLanguageDistribution(db, effectiveDate);
-	} catch {
-		// Non-fatal: page renders without language chart
-	}
-	try {
-		dateCounts = await getDateRepoCounts(db);
-	} catch {
-		// Non-fatal: page renders without heatmap
-	}
+	const [trendingRepos, languageResult, dateCountResult] = await Promise.all([
+		getTrendingReposWithStreaks(db, effectiveDate),
+		getLanguageDistribution(db, effectiveDate).catch(() => []),
+		getDateRepoCounts(db).catch(() => []),
+	]);
+	repos = sortDailyRepos(trendingRepos, sort);
+	languages = languageResult;
+	dateCounts = dateCountResult;
 } catch (error) {
 	hasError = true;
 	logError("homepage_ssr_error")(error);
@@ -68,7 +65,11 @@ try {
 	description="Browse the historical archive of GitHub trending repositories, daily and weekly."
 >
 	<Toolbar>
-		<DatePicker selectedDate={effectiveDate} viewMode="daily" />
+		<DatePicker
+			selectedDate={effectiveDate}
+			viewMode="daily"
+			availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
+		/>
 		<ViewToggle activeView="daily" currentDate={effectiveDate} />
 		<SortDropdown activeSort={sort} />
 	</Toolbar>
