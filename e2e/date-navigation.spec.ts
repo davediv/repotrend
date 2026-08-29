@@ -55,6 +55,29 @@ test.describe("Date Navigation", () => {
 		await expect(page.locator(".date-display")).toContainText("February 11, 2026");
 	});
 
+	test("today's dated URL resolves to the canonical homepage", async ({ page }) => {
+		const today = new Date().toISOString().slice(0, 10);
+		await page.goto(`/trending/${today}`);
+
+		await expect(page).toHaveURL("/");
+		await expect(page.locator(".daily-archive-page")).toHaveAttribute("data-context", "latest");
+		await expect(
+			page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Today" }),
+		).toHaveAttribute("aria-current", "page");
+	});
+
+	test("daily pages share one archive composition", async ({ page }) => {
+		for (const path of ["/", "/trending/2026-02-15"]) {
+			await page.goto(path);
+			await expect(page.locator(".daily-archive-page")).toBeVisible();
+			await expect(page.locator(".snapshot-heading")).toBeVisible();
+			await expect(page.locator(".date-picker")).toBeVisible();
+			await expect(page.locator(".language-chart")).toBeVisible();
+			await expect(page.locator(".calendar-heatmap")).toBeVisible();
+			await expect(page.locator(".card-list-results")).toBeVisible();
+		}
+	});
+
 	test("invalid date format returns the custom 404 page", async ({ page }) => {
 		const response = await page.goto("/trending/not-a-date");
 

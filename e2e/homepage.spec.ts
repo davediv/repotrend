@@ -89,10 +89,10 @@ test.describe("Homepage", () => {
 		await expect(chart).toBeVisible();
 	});
 
-	test("keeps the homepage focused on the latest list", async ({ page }) => {
+	test("uses the same archive composition as dated snapshots", async ({ page }) => {
 		await page.goto("/");
-		const heatmap = page.locator(".calendar-heatmap");
-		await expect(heatmap).toHaveCount(0);
+		await expect(page.locator(".daily-archive-page")).toHaveAttribute("data-context", "latest");
+		await expect(page.locator(".calendar-heatmap")).toBeVisible();
 	});
 
 	test("renders footer with attribution links", async ({ page }) => {

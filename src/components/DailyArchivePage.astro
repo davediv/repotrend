@@ -1,0 +1,122 @@
+---
+import CalendarHeatmap from "./CalendarHeatmap.astro";
+import DatePicker from "./DatePicker.astro";
+import ErrorFallback from "./ErrorFallback.astro";
+import LanguageChart from "./LanguageChart.astro";
+import RepoCardList from "./RepoCardList.astro";
+import Toolbar from "./Toolbar.astro";
+import Layout from "../layouts/Layout.astro";
+import type { DailyArchiveData } from "../lib/daily-archive";
+import { formatDateDisplay } from "../lib/dates";
+
+interface Props {
+	data: DailyArchiveData;
+	today: string;
+	context: "latest" | "archive";
+	hasError?: boolean;
+}
+
+const { data, today, context, hasError = false } = Astro.props;
+const { selectedDate, snapshot, repos, languages, dateCounts } = data;
+const hasSnapshot = snapshot !== null;
+const isTodaySnapshot = hasSnapshot && selectedDate === today;
+const isLatestView = context === "latest";
+const snapshotLabel = formatDateDisplay(selectedDate);
+const scrapedAtDate = snapshot?.scraped_at ? new Date(snapshot.scraped_at) : null;
+const capturedTimeLabel =
+	scrapedAtDate && !Number.isNaN(scrapedAtDate.getTime())
+		? new Intl.DateTimeFormat("en-US", {
+				hour: "numeric",
+				minute: "2-digit",
+				timeZone: "UTC",
+				timeZoneName: "short",
+			}).format(scrapedAtDate)
+		: null;
+
+const heading = isTodaySnapshot
+	? "Trending today"
+	: isLatestView
+		? "Latest snapshot"
+		: `GitHub Trending — ${snapshotLabel}`;
+const pageTitle = isTodaySnapshot
+	? "GitHub Trending Today — RepoTrend"
+	: isLatestView
+		? "Latest GitHub Trending Snapshot — RepoTrend"
+		: `Trending ${snapshotLabel} — RepoTrend`;
+const pageDescription = isTodaySnapshot
+	? "See the unique repositories trending on GitHub today, in the same order as GitHub's daily Trending page."
+	: isLatestView && hasSnapshot
+		? `See the latest available GitHub Trending snapshot from ${snapshotLabel}, in GitHub's original ranking order.`
+		: `GitHub trending repositories captured for ${snapshotLabel}.`;
+const emptyMessage = isLatestView
+	? "No GitHub Trending snapshots are available yet."
+	: `No GitHub Trending snapshot was captured for ${snapshotLabel}. Choose another date to browse the archive.`;
+---
+
+<Layout title={pageTitle} description={pageDescription}>
+	<div class="daily-archive-page" data-context={context}>
+		<Toolbar>
+			<div class="snapshot-heading">
+				<p class="snapshot-kicker">Daily GitHub snapshot</p>
+				<h1>{heading}</h1>
+				{(hasSnapshot || !isLatestView) && (
+					<div class="snapshot-meta">
+						<time datetime={selectedDate}>{snapshotLabel}</time>
+						{capturedTimeLabel && snapshot?.scraped_at && (
+							<time datetime={snapshot.scraped_at}>Captured at {capturedTimeLabel}</time>
+						)}
+					</div>
+				)}
+				{isLatestView && hasSnapshot && !isTodaySnapshot && (
+					<p class="snapshot-notice" role="status">
+						Today's snapshot is not available yet. Showing the latest available snapshot; new
+						snapshots are captured daily around 06:00 UTC.
+					</p>
+				)}
+			</div>
+			<DatePicker
+				selectedDate={selectedDate}
+				viewMode="daily"
+				availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
+			/>
+		</Toolbar>
+		<LanguageChart languages={languages} />
+		<CalendarHeatmap dateCounts={dateCounts} selectedDate={selectedDate} />
+		{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} emptyMessage={emptyMessage} />}
+	</div>
+</Layout>
+
+<style>
+	.snapshot-kicker,
+	.snapshot-heading h1 {
+		margin: 0;
+	}
+
+	.snapshot-kicker {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.snapshot-heading h1 {
+		font-size: 1.5rem;
+		line-height: 1.3;
+	}
+
+	.snapshot-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.75rem;
+		color: var(--color-text-secondary);
+		font-size: 0.875rem;
+	}
+
+	.snapshot-notice {
+		max-width: 42rem;
+		margin-top: 0.375rem;
+		color: var(--color-text-secondary);
+		font-size: 0.8125rem;
+	}
+</style>

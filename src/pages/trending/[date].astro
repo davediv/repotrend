@@ -1,21 +1,8 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import DatePicker from "../../components/DatePicker.astro";
-import Toolbar from "../../components/Toolbar.astro";
-import RepoCardList from "../../components/RepoCardList.astro";
-import ErrorFallback from "../../components/ErrorFallback.astro";
-import { formatDateDisplay, isValidBrowseDate } from "../../lib/dates";
+import DailyArchivePage from "../../components/DailyArchivePage.astro";
+import { loadDailyArchive, type DailyArchiveData } from "../../lib/daily-archive";
+import { isValidBrowseDate, todayUTC } from "../../lib/dates";
 import { logError } from "../../lib/log";
-import {
-	getDateRepoCounts,
-	getLanguageDistribution,
-	getTrendingRepos,
-	type DateRepoCount,
-	type LanguageDistribution,
-	type TrendingRepo,
-} from "../../lib/trending";
-import LanguageChart from "../../components/LanguageChart.astro";
-import CalendarHeatmap from "../../components/CalendarHeatmap.astro";
 
 export const prerender = false;
 
@@ -25,22 +12,22 @@ if (!date || !isValidBrowseDate(date)) {
 	return Astro.rewrite("/404");
 }
 
-const displayDate = formatDateDisplay(date);
+const today = todayUTC();
+if (date === today) {
+	return Astro.redirect("/", 302);
+}
 
-let repos: TrendingRepo[] = [];
-let languages: LanguageDistribution[] = [];
-let dateCounts: DateRepoCount[] = [];
+let data: DailyArchiveData = {
+	selectedDate: date,
+	snapshot: null,
+	repos: [],
+	languages: [],
+	dateCounts: [],
+};
 let hasError = false;
+
 try {
-	const db = Astro.locals.runtime.env.DB;
-	const [trendingRepos, languageResult, dateCountResult] = await Promise.all([
-		getTrendingRepos(db, date),
-		getLanguageDistribution(db, date).catch(() => []),
-		getDateRepoCounts(db).catch(() => []),
-	]);
-	repos = trendingRepos;
-	languages = languageResult;
-	dateCounts = dateCountResult;
+	data = await loadDailyArchive(Astro.locals.runtime.env.DB, { mode: "exact", date });
 } catch (error) {
 	hasError = true;
 	Astro.response.status = 500;
@@ -49,25 +36,4 @@ try {
 }
 ---
 
-<Layout
-	title={`Trending ${displayDate} — RepoTrend`}
-	description={`GitHub trending repositories for ${displayDate}. Browse the most popular open-source projects that trended on ${displayDate}.`}
->
-	<Toolbar>
-		<DatePicker
-			selectedDate={date}
-			viewMode="daily"
-			availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
-		/>
-	</Toolbar>
-	<LanguageChart languages={languages} />
-	<CalendarHeatmap dateCounts={dateCounts} selectedDate={date} />
-	{hasError ? (
-		<ErrorFallback />
-	) : (
-		<RepoCardList
-			repos={repos}
-			emptyMessage={`No GitHub Trending snapshot was captured for ${displayDate}. Choose another date to browse the archive.`}
-		/>
-	)}
-</Layout>
+<DailyArchivePage data={data} today={today} context="archive" hasError={hasError} />
