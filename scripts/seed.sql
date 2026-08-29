@@ -201,6 +201,19 @@ INSERT INTO trending_repos (repo_owner, repo_name, description, language, langua
 ('pnpm', 'pnpm', 'Fast, disk space efficient package manager', 'TypeScript', '#3178C6', 28234, 906, 32, '2026-02-15', '2026-02-15T06:00:00Z'),
 ('biomejs', 'biome', 'Toolchain for the web', 'Rust', '#DEA584', 15402, 456, 56, '2026-02-15', '2026-02-15T06:00:00Z');
 
+-- Representative topics used by search/filter acceptance tests.
+UPDATE trending_repos
+SET topics_json = '["react","javascript","frontend"]'
+WHERE repo_owner = 'facebook' AND repo_name = 'react';
+
+UPDATE trending_repos
+SET topics_json = '["nextjs","react","framework"]'
+WHERE repo_owner = 'vercel' AND repo_name = 'next.js';
+
+UPDATE trending_repos
+SET topics_json = '["rust","compiler","systems-programming"]'
+WHERE repo_owner = 'rust-lang' AND repo_name = 'rust';
+
 -- Give local/E2E development a real "today" snapshot while retaining the
 -- fixed historical dates used by navigation tests.
 INSERT OR REPLACE INTO trending_repos (

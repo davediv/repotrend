@@ -19,18 +19,16 @@ test.describe("Search", () => {
 	});
 
 	test("search page renders with input and results", async ({ page }) => {
+		let apiRequests = 0;
+		page.on("request", (request) => {
+			if (new URL(request.url()).pathname === "/api/search") apiRequests++;
+		});
 		await page.goto("/search?q=react");
 		const searchInput = page.locator("#search-page-input");
 		await expect(searchInput).toBeVisible();
 		await expect(searchInput).toHaveValue("react");
-
-		// Wait for results to load (client-side fetch with debounce)
-		await page.waitForSelector(
-			"#search-results .search-result-card, #search-results .search-empty",
-			{
-				timeout: 5000,
-			},
-		);
+		await expect(page.locator("#search-results .search-result-card").first()).toBeVisible();
+		expect(apiRequests).toBe(0);
 	});
 
 	test("search results show matching repos", async ({ page }) => {
@@ -76,7 +74,7 @@ test.describe("Search", () => {
 
 		const empty = page.locator(".search-empty");
 		await expect(empty).toBeVisible();
-		await expect(empty).toContainText("No repos found");
+		await expect(empty).toContainText("No repositories found");
 	});
 
 	test("search input is keyboard accessible and functional", async ({ page }) => {
@@ -98,5 +96,47 @@ test.describe("Search", () => {
 		await page.waitForSelector("#search-results .search-empty", { timeout: 5000 });
 		const results = page.locator(".search-result-card");
 		await expect(results).toHaveCount(0);
+	});
+
+	test("server-renders shared search URLs without JavaScript", async ({ browser, baseURL }) => {
+		const context = await browser.newContext({ javaScriptEnabled: false });
+		const page = await context.newPage();
+		await page.goto(new URL("/search?q=react", baseURL).href);
+		const result = page.locator(".search-result-card").first();
+		await expect(result.locator(".repo-owner")).toHaveText("facebook");
+		await expect(result.locator(".repo-name-text")).toHaveText("react");
+		await context.close();
+	});
+
+	test("topic links run an exact topic search", async ({ page }) => {
+		await page.goto("/");
+		const topicLink = page.locator('a.topic-tag[href="/search?topic=react"]').first();
+		await expect(topicLink).toBeVisible();
+		await topicLink.click();
+		await expect(page).toHaveURL(/\/search\?topic=react/);
+		const result = page.locator(".search-result-card").first();
+		await expect(result.locator(".repo-owner")).toHaveText("facebook");
+		await expect(result.locator(".repo-name-text")).toHaveText("react");
+		await expect(page.locator('input[name="topic"]')).toHaveValue("react");
+	});
+
+	test("supports language and date-range filters with server pagination", async ({ page }) => {
+		await page.goto("/search?language=Rust");
+		await expect(page.locator(".search-result-card")).toHaveCount(3);
+		await expect(page.locator(".language-filter")).toHaveText(["Rust", "Rust", "Rust"]);
+
+		await page.goto("/search?from=2026-02-09&to=2026-02-15");
+		await expect(page.locator(".search-result-card")).toHaveCount(20);
+		await expect(page.locator(".results-count")).toContainText("of 25 matching repositories");
+		await expect(page.locator(".pagination-next")).toHaveAttribute("href", /page=2/);
+	});
+
+	test("enhances text search with a debounced shareable URL", async ({ page }) => {
+		await page.goto("/search");
+		await page.locator("#search-page-input").fill("next.js");
+		await expect(page).toHaveURL(/\/search\?q=next\.js/, { timeout: 5000 });
+		const result = page.locator(".search-result-card").first();
+		await expect(result.locator(".repo-owner")).toHaveText("vercel");
+		await expect(result.locator(".repo-name-text")).toHaveText("next.js");
 	});
 });

@@ -76,7 +76,7 @@ const hiddenTopicCount = topics.length - visibleTopics.length;
 				{
 					visibleTopics.map((topic) => (
 						<li>
-							<a class="topic-tag" href={`/search?q=${encodeURIComponent(topic)}`}>
+							<a class="topic-tag" href={`/search?topic=${encodeURIComponent(topic)}`}>
 								#{topic}
 							</a>
 						</li>

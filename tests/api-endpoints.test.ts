@@ -566,13 +566,15 @@ describe("GET /api/search", () => {
 	});
 
 	describe("search results", () => {
-		it("groups rows by repo with dates array", async () => {
-			const rows = [
-				sampleRepo({ trending_date: "2026-02-05" }),
-				sampleRepo({ trending_date: "2026-02-04" }),
-				sampleRepo({ trending_date: "2026-02-03" }),
-			];
-			const { db } = mockDB({ queryResults: rows });
+		it("returns grouped dates and parsed topics from the repository index", async () => {
+			const row = {
+				...sampleRepo(),
+				topics_json: '["react","frontend"]',
+				dates_csv: "2026-02-03,2026-02-05,2026-02-04",
+			};
+			const { db } = mockDB({
+				queryResultsByIndex: { 0: [{ total: 1 }], 1: [row] },
+			});
 			const url = new URL("http://localhost/api/search?q=react");
 			const res = await getSearch(apiContext({ db, url }));
 
@@ -587,8 +589,8 @@ describe("GET /api/search", () => {
 			expect(body.total).toBe(1);
 		});
 
-		it("limits results to 50 unique repos", async () => {
-			const rows = Array.from({ length: 60 }, (_, i) => ({
+		it("returns honest totals with server pagination", async () => {
+			const rows = Array.from({ length: 20 }, (_, i) => ({
 				repo_owner: "org",
 				repo_name: `repo-${i}`,
 				description: "Description",
@@ -597,15 +599,47 @@ describe("GET /api/search", () => {
 				total_stars: 100,
 				forks: 10,
 				stars_today: 10,
-				trending_date: "2026-02-05",
+				topics_json: "[]",
+				dates_csv: "2026-02-05",
 			}));
-			const { db } = mockDB({ queryResults: rows });
+			const { db } = mockDB({
+				queryResultsByIndex: { 0: [{ total: 60 }], 1: rows },
+			});
 			const url = new URL("http://localhost/api/search?q=repo");
 			const res = await getSearch(apiContext({ db, url }));
 
-			const body = (await res.json()) as { total: number; results: unknown[] };
-			expect(body.total).toBe(50);
-			expect(body.results).toHaveLength(50);
+			const body = (await res.json()) as {
+				total: number;
+				results: unknown[];
+				page_size: number;
+				total_pages: number;
+			};
+			expect(body.total).toBe(60);
+			expect(body.results).toHaveLength(20);
+			expect(body.page_size).toBe(20);
+			expect(body.total_pages).toBe(3);
+		});
+
+		it("supports exact topic filters without a text query", async () => {
+			const row = {
+				...sampleRepo(),
+				topics_json: '["react"]',
+				dates_csv: "2026-02-05",
+			};
+			const { db, calls } = mockDB({
+				queryResultsByIndex: { 0: [{ total: 1 }], 1: [row] },
+			});
+			const url = new URL("http://localhost/api/search?topic=react");
+			const res = await getSearch(apiContext({ db, url }));
+
+			const body = (await res.json()) as {
+				results: Array<{ repo_name: string }>;
+				filters: { topic: string };
+			};
+			expect(body.results[0].repo_name).toBe("react");
+			expect(body.filters.topic).toBe("react");
+			expect(calls.prepare[0]).toContain("repository_topics");
+			expect(calls.bind[0][1]).toBe("react");
 		});
 
 		it("includes Cache-Control header on results", async () => {

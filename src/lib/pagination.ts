@@ -28,11 +28,15 @@ export function parsePageParam(raw: string | null): number {
 }
 
 /** Calculate pagination info for a given total item count and page number. */
-export function paginate(totalItems: number, page: number): PaginationInfo {
-	const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+export function paginate(
+	totalItems: number,
+	page: number,
+	pageSize: number = PAGE_SIZE,
+): PaginationInfo {
+	const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 	const currentPage = Math.max(1, Math.min(page, totalPages));
-	const startIndex = (currentPage - 1) * PAGE_SIZE;
-	const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
+	const startIndex = (currentPage - 1) * pageSize;
+	const endIndex = Math.min(startIndex + pageSize, totalItems);
 
 	return { currentPage, totalPages, totalItems, startIndex, endIndex };
 }

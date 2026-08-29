@@ -1,280 +1,263 @@
 ---
+import ErrorFallback from "../components/ErrorFallback.astro";
+import Pagination from "../components/Pagination.astro";
+import SearchResultCard from "../components/SearchResultCard.astro";
 import Layout from "../layouts/Layout.astro";
+import { logError } from "../lib/log";
+import { paginate } from "../lib/pagination";
+import {
+	getSearchLanguages,
+	MIN_SEARCH_QUERY_LENGTH,
+	parseSearchRequest,
+	searchArchive,
+	SEARCH_PAGE_SIZE,
+} from "../lib/search";
+import type { SearchResult } from "../lib/search-types";
 
 export const prerender = false;
 
-const query = Astro.url.searchParams.get("q")?.trim() ?? "";
+const parsed = parseSearchRequest(Astro.url.searchParams);
+const { filters } = parsed;
+let results: SearchResult[] = [];
+let pagination = paginate(0, filters.page, SEARCH_PAGE_SIZE);
+let languages: string[] = [];
+let hasError = false;
+
+if (parsed.error) {
+	Astro.response.status = 400;
+	Astro.response.statusText = "Bad Request";
+}
+
+try {
+	const db = Astro.locals.runtime.env.DB;
+	if (parsed.shouldSearch && !parsed.error) {
+		const [languageResult, searchResult] = await Promise.all([
+			getSearchLanguages(db),
+			searchArchive(db, filters),
+		]);
+		languages = languageResult;
+		results = searchResult.results;
+		pagination = searchResult.pagination;
+	} else {
+		languages = await getSearchLanguages(db);
+	}
+} catch (error) {
+	hasError = true;
+	Astro.response.status = 500;
+	Astro.response.statusText = "Internal Server Error";
+	logError("search_page_ssr_error", {
+		queryLength: filters.query.length,
+		hasFilters: Boolean(filters.topic || filters.language || filters.from || filters.to),
+	})(error);
+}
+
+const hasCriteria = Boolean(
+	filters.query || filters.topic || filters.language || filters.from || filters.to,
+);
+const hasStructuredFilters = Boolean(
+	filters.topic || filters.language || filters.from || filters.to,
+);
+const resultStart = pagination.totalItems > 0 ? pagination.startIndex + 1 : 0;
+const resultEnd = pagination.endIndex;
+const titleContext = filters.query
+	? filters.query
+	: filters.topic
+		? `#${filters.topic}`
+		: filters.language || "Archive";
 ---
 
 <Layout
-	title={query ? `Search: ${query} — RepoTrend` : "Search — RepoTrend"}
-	description={query ? `Search results for "${query}" in the GitHub trending archive.` : "Search the historical archive of GitHub trending repositories."}
+	title={hasCriteria ? `Search: ${titleContext} — RepoTrend` : "Search — RepoTrend"}
+	description="Search and filter the historical archive of GitHub trending repositories."
 >
 	<div class="search-page">
-		<div class="search-header">
-			<h1>Search Trending Repos</h1>
-			<form class="search-page-form" action="/search" method="get" role="search" aria-label="Search trending repos">
-				<svg class="search-page-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<circle cx="11" cy="11" r="8"></circle>
-					<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-				</svg>
+		<header class="search-header">
+			<p class="search-kicker">GitHub Trending archive</p>
+			<h1>Search repositories</h1>
+			<p>Search names, descriptions, and topics, or narrow the archive with exact filters.</p>
+		</header>
+
+		<form
+			class="search-page-form"
+			action="/search"
+			method="get"
+			role="search"
+			aria-label="Search trending repos"
+		>
+			<div class="query-row">
+				<label for="search-page-input" class="search-page-icon">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<circle cx="11" cy="11" r="8"></circle>
+						<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+					</svg>
+					<span class="sr-only">Repository or keyword</span>
+				</label>
 				<input
 					type="search"
 					id="search-page-input"
 					name="q"
 					class="search-page-input"
-					placeholder="Search trending repos..."
-					aria-label="Search trending repos"
+					placeholder="Repository, owner, description, or topic..."
 					autocomplete="off"
-					value={query}
+					value={filters.query}
 				/>
-			</form>
-		</div>
+				<button type="submit" class="search-submit">Search</button>
+			</div>
+
+			<details class="search-filters" open={hasStructuredFilters}>
+				<summary>Filters {hasStructuredFilters && <span>Active</span>}</summary>
+				<div class="filter-grid">
+					<label>
+						<span>Topic</span>
+						<input name="topic" value={filters.topic} placeholder="e.g. react" />
+					</label>
+					<label>
+						<span>Language</span>
+						<select name="language">
+							<option value="">All languages</option>
+							{filters.language && !languages.includes(filters.language) && (
+								<option value={filters.language} selected>{filters.language}</option>
+							)}
+							{languages.map((language) => (
+								<option value={language} selected={language === filters.language}>{language}</option>
+							))}
+						</select>
+					</label>
+					<label>
+						<span>From date</span>
+						<input type="date" name="from" value={filters.from} />
+					</label>
+					<label>
+						<span>To date</span>
+						<input type="date" name="to" value={filters.to} />
+					</label>
+				</div>
+				<div class="filter-actions">
+					<button type="submit" class="filter-submit">Apply filters</button>
+					{hasCriteria && <a href="/search">Clear search and filters</a>}
+				</div>
+			</details>
+		</form>
 
 		<div id="search-results" class="search-results" aria-live="polite">
-			{!query && (
-				<div class="search-empty" role="status">
-					<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<circle cx="11" cy="11" r="8"></circle>
-						<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-					</svg>
-					<p>Type a repository name or keyword to search.</p>
+			{hasError ? (
+				<ErrorFallback message="Search is temporarily unavailable. Please try again." />
+			) : parsed.error ? (
+				<div class="search-empty" role="alert">
+					<h2>Check your filters</h2>
+					<p>{parsed.error}</p>
 				</div>
+			) : !hasCriteria ? (
+				<div class="search-empty" role="status">
+					<h2>Search the archive</h2>
+					<p>Enter at least two characters or apply a topic, language, or date filter.</p>
+				</div>
+			) : filters.query.length > 0 && filters.query.length < MIN_SEARCH_QUERY_LENGTH && !hasStructuredFilters ? (
+				<div class="search-empty" role="status">
+					<h2>Keep typing</h2>
+					<p>Type at least {MIN_SEARCH_QUERY_LENGTH} characters to search.</p>
+				</div>
+			) : results.length === 0 ? (
+				<div class="search-empty" role="status">
+					<h2>No repositories found</h2>
+					<p>Try a broader keyword, remove a filter, or widen the date range.</p>
+				</div>
+			) : (
+				<>
+					<p class="results-count">
+						Showing {resultStart}–{resultEnd} of {pagination.totalItems} matching {pagination.totalItems === 1 ? "repository" : "repositories"}.
+					</p>
+					<ol id="results" class="results-list" aria-label="Search results">
+						{results.map((repository, index) => (
+							<li><SearchResultCard repository={repository} index={pagination.startIndex + index} /></li>
+						))}
+					</ol>
+					<Pagination pagination={pagination} />
+				</>
 			)}
 		</div>
 	</div>
 </Layout>
 
 <script>
-	import { escapeHTML, formatNumber, sanitizeHexColor } from "../lib/format";
-	import type { SearchResult, SearchResponse } from "../lib/search-types";
-
-	const input = document.getElementById("search-page-input") as HTMLInputElement;
-	const form = document.querySelector(".search-page-form") as HTMLFormElement;
-	const resultsContainer = document.getElementById("search-results")!;
+	const form = document.querySelector<HTMLFormElement>(".search-page-form");
+	const input = document.getElementById("search-page-input") as HTMLInputElement | null;
 	let debounceTimer: ReturnType<typeof setTimeout>;
-	let abortController: AbortController | null = null;
-	let currentQuery = input.value;
+	const initialQuery = input?.value.trim() ?? "";
 
-	const SEARCH_SVG = '<circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>';
-	const DOCUMENT_SVG = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line>';
-	const WARNING_SVG = '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>';
-
-	function renderEmptyState(svgContent: string, message: string, role = "status"): string {
-		return `<div class="search-empty" role="${role}">
-			<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${svgContent}</svg>
-			<p>${message}</p>
-		</div>`;
-	}
-
-	function formatDate(dateStr: string): string {
-		const [year, month, day] = dateStr.split("-").map(Number);
-		const date = new Date(year, month - 1, day);
-		return new Intl.DateTimeFormat("en-US", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		}).format(date);
-	}
-
-	function renderResults(data: SearchResponse, query: string): void {
-		if (data.results.length === 0) {
-			resultsContainer.innerHTML = renderEmptyState(DOCUMENT_SVG, `No repos found for '${escapeHTML(query)}'`);
-			return;
-		}
-
-		const html = `
-			<p class="results-count">${data.total} result${data.total === 1 ? "" : "s"} for "${escapeHTML(query)}"</p>
-			<ol class="results-list" aria-label="Search results">
-				${data.results.map((repo) => renderResultCard(repo)).join("")}
-			</ol>`;
-		resultsContainer.innerHTML = html;
-	}
-
-	function renderResultCard(repo: SearchResult): string {
-		const repoUrl = `https://github.com/${escapeHTML(repo.repo_owner)}/${escapeHTML(repo.repo_name)}`;
-		const safeColor = sanitizeHexColor(repo.language_color);
-		const recentDates = repo.dates.slice(0, 10);
-		const hasMore = repo.dates.length > 10;
-		const visibleTopics = repo.topics.slice(0, 8);
-		const hiddenTopicCount = repo.topics.length - visibleTopics.length;
-
-		return `<li>
-			<article class="search-result-card">
-				<div class="result-header">
-					<h2 class="repo-name">
-						<a href="${repoUrl}" target="_blank" rel="noopener noreferrer">
-							<span class="repo-owner">${escapeHTML(repo.repo_owner)}</span><span class="repo-separator">/</span><span class="repo-name-text">${escapeHTML(repo.repo_name)}</span>
-							<span class="sr-only">(opens in new tab)</span>
-						</a>
-					</h2>
-					<div class="result-meta">
-						${repo.language ? `<span class="meta-item language"><span class="language-dot" aria-hidden="true"${safeColor ? ` style="background-color: ${safeColor}"` : ""}></span>${escapeHTML(repo.language)}</span>` : ""}
-						<span class="meta-item">
-							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-								<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-							</svg>
-							<span class="sr-only">Stars:</span>
-							${formatNumber(repo.total_stars)}
-						</span>
-						<span class="meta-item">
-							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-								<circle cx="12" cy="18" r="3"></circle>
-								<circle cx="6" cy="6" r="3"></circle>
-								<circle cx="18" cy="6" r="3"></circle>
-								<path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"></path>
-								<path d="M12 12v3"></path>
-							</svg>
-							<span class="sr-only">Forks:</span>
-							${formatNumber(repo.forks)}
-						</span>
-					</div>
-				</div>
-				${repo.description ? `<p class="repo-description">${escapeHTML(repo.description)}</p>` : ""}
-				${
-					visibleTopics.length > 0
-						? `<div class="result-topics">
-							<span class="topics-label">Topics:</span>
-							<div class="topics-list">
-								${visibleTopics
-									.map(
-										(topic) =>
-											`<a href="/search?q=${encodeURIComponent(topic)}" class="topic-tag">#${escapeHTML(topic)}</a>`,
-									)
-									.join("")}
-								${
-									hiddenTopicCount > 0
-										? `<span class="topic-more" title="${hiddenTopicCount} more topics not shown">+${hiddenTopicCount}</span>`
-										: ""
-								}
-							</div>
-						</div>`
-						: ""
-				}
-				<div class="result-dates">
-					<span class="dates-label">Trending on:</span>
-					<div class="dates-list">
-						${recentDates.map((d) => `<a href="/trending/${escapeHTML(d)}" class="date-link">${formatDate(d)}</a>`).join("")}
-						${hasMore ? `<span class="dates-more">and ${repo.dates.length - 10} more</span>` : ""}
-					</div>
-				</div>
-			</article>
-		</li>`;
-	}
-
-	function renderLoading(): void {
-		resultsContainer.innerHTML = `
-			<div class="search-loading" role="status">
-				<div class="loading-spinner"></div>
-				<p>Searching...</p>
-			</div>`;
-	}
-
-	async function performSearch(query: string): Promise<void> {
-		if (query.length < 2) {
-			resultsContainer.innerHTML = renderEmptyState(SEARCH_SVG, "Type at least 2 characters to search.");
-			return;
-		}
-
-		// Cancel any in-flight request to prevent stale responses overwriting newer results
-		if (abortController) abortController.abort();
-		abortController = new AbortController();
-
-		renderLoading();
-
-		try {
-			const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-				signal: abortController.signal,
-			});
-			if (!response.ok) throw new Error("Search failed");
-
-			const data: SearchResponse = await response.json();
-			renderResults(data, query);
-		} catch (error) {
-			// Don't show error state for intentionally aborted requests
-			if (error instanceof DOMException && error.name === "AbortError") return;
-			resultsContainer.innerHTML = renderEmptyState(WARNING_SVG, "Failed to load search results. Please try again.", "alert");
-		}
-	}
-
-	// Update URL without page reload
-	function updateURL(query: string): void {
-		const url = new URL(window.location.href);
-		if (query) {
-			url.searchParams.set("q", query);
-		} else {
-			url.searchParams.delete("q");
-		}
-		history.replaceState(null, "", url.toString());
-	}
-
-	function triggerSearch(): void {
-		clearTimeout(debounceTimer);
+	function enhancedSearch(): void {
+		if (!form || !input) return;
 		const query = input.value.trim();
-		if (query !== currentQuery) {
-			currentQuery = query;
-			updateURL(query);
-		}
-		performSearch(query);
+		if (query === initialQuery || (query.length > 0 && query.length < 2)) return;
+
+		const target = new URL(form.action);
+		new FormData(form).forEach((value, key) => {
+			if (typeof value === "string" && value.trim()) target.searchParams.set(key, value.trim());
+		});
+		window.location.assign(`${target.pathname}${target.search}`);
 	}
 
-	// Prevent full-page reload when JS is active; trigger immediate search instead
-	form.addEventListener("submit", (e) => {
-		e.preventDefault();
-		triggerSearch();
-	});
-
-	input.addEventListener("input", () => {
+	input?.addEventListener("input", () => {
 		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => {
-			const query = input.value.trim();
-			if (query !== currentQuery) {
-				currentQuery = query;
-				updateURL(query);
-				performSearch(query);
-			}
-		}, 300);
+		debounceTimer = setTimeout(enhancedSearch, 600);
 	});
-
-	// Perform initial search if query param is present
-	if (currentQuery) {
-		performSearch(currentQuery);
-	}
 </script>
 
 <style>
 	.search-page {
-		max-width: 800px;
+		max-width: 56rem;
 		margin: 0 auto;
 	}
 
 	.search-header {
-		margin-bottom: 1.5rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.search-kicker,
+	.search-header h1,
+	.search-header > p:last-child {
+		margin: 0;
+	}
+
+	.search-kicker {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 	}
 
 	.search-header h1 {
-		margin: 0 0 1rem;
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: var(--color-text);
+		font-size: 1.75rem;
+	}
+
+	.search-header > p:last-child {
+		margin-top: 0.375rem;
+		color: var(--color-text-secondary);
 	}
 
 	.search-page-form {
+		margin-bottom: 1.5rem;
+	}
+
+	.query-row {
 		position: relative;
 		display: flex;
-		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.search-page-icon {
 		position: absolute;
+		top: 12px;
 		left: 0.875rem;
 		color: var(--color-text-secondary);
 		pointer-events: none;
 	}
 
 	.search-page-input {
-		width: 100%;
+		min-width: 0;
 		height: 44px;
+		flex: 1;
 		padding: 0 1rem 0 2.75rem;
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
@@ -282,192 +265,139 @@ const query = Astro.url.searchParams.get("q")?.trim() ?? "";
 		color: var(--color-text);
 		font-family: inherit;
 		font-size: 1rem;
-		transition: border-color 0.15s;
 	}
 
-	.search-page-input::placeholder {
+	.search-submit,
+	.filter-submit {
+		min-height: 44px;
+		padding: 0.625rem 1rem;
+		border: 1px solid var(--color-accent);
+		border-radius: 6px;
+		background: var(--color-accent);
+		color: var(--color-accent-text);
+		font: inherit;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	.search-filters {
+		margin-top: 0.75rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+	}
+
+	.search-filters summary {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 44px;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	.search-filters summary span {
+		padding: 0.125rem 0.375rem;
+		border-radius: 1rem;
+		background: var(--color-bg-secondary);
 		color: var(--color-text-secondary);
+		font-size: 0.6875rem;
 	}
 
-	.search-page-input:focus-visible {
-		border-color: var(--color-accent);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+	.filter-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+		padding: 0.75rem;
+		border-top: 1px solid var(--color-border);
 	}
 
-	/* Results */
+	.filter-grid label {
+		display: grid;
+		gap: 0.25rem;
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 500;
+	}
+
+	.filter-grid input,
+	.filter-grid select {
+		width: 100%;
+		min-height: 42px;
+		padding: 0.5rem 0.625rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		background: var(--color-bg);
+		color: var(--color-text);
+		font: inherit;
+		font-size: 0.875rem;
+	}
+
+	.filter-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0 0.75rem 0.75rem;
+	}
+
+	.filter-actions a {
+		color: var(--color-link);
+		font-size: 0.8125rem;
+	}
+
 	.results-count {
 		margin: 0 0 1rem;
-		font-size: 0.875rem;
 		color: var(--color-text-secondary);
+		font-size: 0.875rem;
 	}
 
 	.results-list {
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		list-style: none;
 		margin: 0;
 		padding: 0;
+		list-style: none;
 	}
 
-	/* Empty / Loading states */
-	.search-empty,
-	.search-loading {
+	.search-empty {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
+		flex-direction: column;
+		gap: 0.375rem;
 		padding: 3rem 1rem;
 		color: var(--color-text-secondary);
 		text-align: center;
 	}
 
-	.search-empty p,
-	.search-loading p {
+	.search-empty h2,
+	.search-empty p {
 		margin: 0;
-		font-size: 1rem;
 	}
 
-	.loading-spinner {
-		width: 32px;
-		height: 32px;
-		border: 3px solid var(--color-border);
-		border-top-color: var(--color-accent);
-		border-radius: 50%;
-		animation: spin 0.8s linear infinite;
-	}
-
-	@keyframes spin {
-		to { transform: rotate(360deg); }
-	}
-
-	/* Result card — uses global .repo-name, .repo-description, .meta-item,
-	   .language-dot, .repo-owner, .repo-separator from repo-card.css */
-	.search-result-card {
-		padding: 1rem 1.25rem;
-		border: 1px solid var(--color-border);
-		border-radius: 6px;
-		background: var(--color-bg);
-		box-shadow: 0 1px 3px var(--color-shadow);
-		transition:
-			border-color 0.15s,
-			box-shadow 0.15s;
-	}
-
-	.search-result-card:hover {
-		border-color: var(--color-border-hover);
-		box-shadow: 0 2px 6px var(--color-shadow-hover);
-	}
-
-	.result-header {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.result-meta {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.75rem;
-		font-size: 0.8125rem;
-		color: var(--color-text-secondary);
-	}
-
-	.result-dates {
-		margin-top: 0.75rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--color-border);
-	}
-
-	.result-topics {
-		margin-top: 0.75rem;
-	}
-
-	.topics-label {
-		display: block;
-		margin-bottom: 0.375rem;
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: var(--color-text-secondary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.topics-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.375rem;
-	}
-
-	.dates-label {
-		display: block;
-		margin-bottom: 0.375rem;
-		font-size: 0.75rem;
-		font-weight: 500;
-		color: var(--color-text-secondary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.dates-list {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.375rem;
-	}
-
-	.date-link {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.125rem 0.5rem;
-		font-size: 0.75rem;
-		color: var(--color-link);
-		background-color: var(--color-bg-secondary);
-		border: 1px solid var(--color-border);
-		border-radius: 1rem;
-		text-decoration: none;
-		transition:
-			border-color 0.15s,
-			background-color 0.15s;
-	}
-
-	.date-link:hover {
-		border-color: var(--color-accent);
-		background-color: var(--color-bg-tertiary);
-	}
-
-	.dates-more {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.125rem 0.5rem;
-		font-size: 0.75rem;
-		color: var(--color-text-secondary);
+	.search-empty h2 {
+		color: var(--color-text);
+		font-size: 1.125rem;
 	}
 
 	@media (max-width: 640px) {
-		.search-header h1 {
-			font-size: 1.25rem;
+		.query-row {
+			flex-wrap: wrap;
 		}
 
-		.search-result-card {
-			padding: 0.75rem;
+		.search-page-input {
+			width: 100%;
+			flex-basis: 100%;
 		}
 
-		.result-header {
-			flex-direction: column;
-			gap: 0.375rem;
+		.search-submit {
+			width: 100%;
 		}
 
-		.result-meta {
-			gap: 0.5rem;
-			font-size: 0.75rem;
-		}
-
-		.result-dates {
-			margin-top: 0.625rem;
-			padding-top: 0.625rem;
+		.filter-grid {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

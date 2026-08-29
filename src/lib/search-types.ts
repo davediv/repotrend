@@ -12,9 +12,22 @@ export interface SearchResult {
 	dates: string[];
 }
 
+export interface SearchFilters {
+	query: string;
+	topic: string;
+	language: string;
+	from: string;
+	to: string;
+	page: number;
+}
+
 /** Shape of the `/api/search` JSON response. */
 export interface SearchResponse {
 	results: SearchResult[];
 	total: number;
 	query: string;
+	filters: Omit<SearchFilters, "query" | "page">;
+	page: number;
+	page_size: number;
+	total_pages: number;
 }
