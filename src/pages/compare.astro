@@ -32,6 +32,8 @@ if (validDates) {
 		commonKeys = new Set([...date1Keys].filter((k) => date2Keys.has(k)));
 	} catch (error) {
 		hasError = true;
+		Astro.response.status = 500;
+		Astro.response.statusText = "Internal Server Error";
 		logError("compare_ssr_error", { date1, date2 })(error);
 	}
 }

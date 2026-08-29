@@ -43,6 +43,8 @@ try {
 	dateCounts = dateCountResult;
 } catch (error) {
 	hasError = true;
+	Astro.response.status = 500;
+	Astro.response.statusText = "Internal Server Error";
 	logError("trending_date_ssr_error", { date })(error);
 }
 ---
@@ -60,5 +62,12 @@ try {
 	</Toolbar>
 	<LanguageChart languages={languages} />
 	<CalendarHeatmap dateCounts={dateCounts} selectedDate={date} />
-	{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} />}
+	{hasError ? (
+		<ErrorFallback />
+	) : (
+		<RepoCardList
+			repos={repos}
+			emptyMessage={`No GitHub Trending snapshot was captured for ${displayDate}. Choose another date to browse the archive.`}
+		/>
+	)}
 </Layout>

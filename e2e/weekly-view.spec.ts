@@ -26,6 +26,14 @@ test.describe("Legacy Weekly Archive", () => {
 		await page.waitForURL(/\/trending\/week\/2026-02-09/);
 	});
 
+	test("invalid weekly dates return the custom 404 page", async ({ page }) => {
+		const response = await page.goto("/trending/week/not-a-date");
+
+		expect(response?.status()).toBe(404);
+		await expect(page).toHaveTitle("Page Not Found — RepoTrend");
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText("404 — Page Not Found");
+	});
+
 	test("switching from Weekly back to Daily works", async ({ page }) => {
 		await page.goto("/trending/week/2026-02-09");
 		const dailyBtn = page.locator(".view-toggle-btn").first();

@@ -44,6 +44,8 @@ try {
 	}
 } catch (error) {
 	hasError = true;
+	Astro.response.status = 500;
+	Astro.response.statusText = "Internal Server Error";
 	logError("homepage_ssr_error")(error);
 }
 

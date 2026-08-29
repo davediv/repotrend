@@ -2,7 +2,10 @@
 import Layout from "../layouts/Layout.astro";
 import ErrorFallback from "../components/ErrorFallback.astro";
 
+export const prerender = false;
+
 Astro.response.status = 404;
+Astro.response.statusText = "Not Found";
 ---
 
 <Layout

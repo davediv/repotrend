@@ -1,4 +1,4 @@
-import { defineMiddleware } from "astro:middleware";
+import type { MiddlewareHandler } from "astro";
 import { logError } from "./lib/log";
 
 /** Security headers applied to every response. */
@@ -33,7 +33,7 @@ function applySecurityHeaders(response: Response): void {
  * instead of exposing raw error details or a blank screen.
  * Also applies security headers to every response.
  */
-export const onRequest = defineMiddleware(async (context, next) => {
+export const onRequest: MiddlewareHandler = async (context, next) => {
 	try {
 		const response = await next();
 		applySecurityHeaders(response);
@@ -58,7 +58,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		applySecurityHeaders(response);
 		return response;
 	}
-});
+};
 
 /**
  * Inline HTML for the 500 error page. Uses the same design tokens and layout

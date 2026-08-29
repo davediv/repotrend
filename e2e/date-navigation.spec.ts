@@ -55,12 +55,40 @@ test.describe("Date Navigation", () => {
 		await expect(page.locator(".date-display")).toContainText("February 11, 2026");
 	});
 
-	test("invalid date format shows error page", async ({ page }) => {
-		await page.goto("/trending/not-a-date");
-		// Invalid date triggers the global error boundary middleware
-		const errorContainer = page.locator(".error-container");
-		await expect(errorContainer).toBeVisible();
-		await expect(errorContainer).toContainText("Something went wrong");
+	test("invalid date format returns the custom 404 page", async ({ page }) => {
+		const response = await page.goto("/trending/not-a-date");
+
+		expect(response?.status()).toBe(404);
+		await expect(page).toHaveTitle("Page Not Found — RepoTrend");
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText("404 — Page Not Found");
+		await expect(page.locator(".error-container")).toHaveCount(0);
+	});
+
+	test("impossible and future dates return 404", async ({ page }) => {
+		for (const date of ["2026-02-30", "2999-01-01"]) {
+			const response = await page.goto(`/trending/${date}`);
+			expect(response?.status()).toBe(404);
+			await expect(page.getByRole("heading", { level: 1 })).toHaveText("404 — Page Not Found");
+		}
+	});
+
+	test("valid dates without a capture return a specific no-data state", async ({ page }) => {
+		const response = await page.goto("/trending/2026-02-08");
+
+		expect(response?.status()).toBe(200);
+		await expect(page).toHaveTitle(/February 8, 2026/);
+		await expect(page.getByRole("status")).toContainText(
+			"No GitHub Trending snapshot was captured for February 8, 2026",
+		);
+		await expect(page.getByText("Something went wrong")).toHaveCount(0);
+	});
+
+	test("unknown routes return the custom 404 page", async ({ page }) => {
+		const response = await page.goto("/route-that-does-not-exist");
+
+		expect(response?.status()).toBe(404);
+		await expect(page).toHaveTitle("Page Not Found — RepoTrend");
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText("404 — Page Not Found");
 	});
 
 	test("cards are ranked 1 through 25", async ({ page }) => {

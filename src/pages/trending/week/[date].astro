@@ -67,6 +67,8 @@ try {
 	dateCounts = dateCountResult;
 } catch (error) {
 	hasError = true;
+	Astro.response.status = 500;
+	Astro.response.statusText = "Internal Server Error";
 	logError("trending_week_ssr_error", { date })(error);
 }
 
@@ -100,6 +102,7 @@ const repos = allRepos.slice(paginationInfo.startIndex, paginationInfo.endIndex)
 				weekStart={monday}
 				partial={partial}
 				rankOffset={paginationInfo.startIndex}
+				emptyMessage={`No GitHub Trending snapshots were captured for ${weekLabel}. Choose another week to browse the archive.`}
 			/>
 			<Pagination pagination={paginationInfo} />
 		</>
