@@ -1,0 +1,395 @@
+---
+import ErrorFallback from "../../../components/ErrorFallback.astro";
+import Layout from "../../../layouts/Layout.astro";
+import { ArchiveValidationError, createArchiveService } from "../../../lib/archive-service";
+import { formatDateDisplay } from "../../../lib/dates";
+import { formatNumber, sanitizeHexColor } from "../../../lib/format";
+import { logError } from "../../../lib/log";
+import {
+	githubRepositoryUrl,
+	repositoryPath,
+	type RepositoryArchive,
+} from "../../../lib/repository";
+
+export const prerender = false;
+
+const { owner, repo } = Astro.params;
+const archive = createArchiveService(Astro.locals.runtime.env);
+let repository: RepositoryArchive | null = null;
+let hasError = false;
+
+try {
+	repository = await archive.getRepository(owner, repo);
+} catch (error) {
+	if (error instanceof ArchiveValidationError) return Astro.rewrite("/404");
+	hasError = true;
+	Astro.response.status = 500;
+	Astro.response.statusText = "Internal Server Error";
+	logError("repository_archive_ssr_error", { owner, repo })(error);
+}
+
+if (!hasError && !repository) return Astro.rewrite("/404");
+
+const canonicalPath = repository
+	? repositoryPath(repository.repo_owner, repository.repo_name)
+	: Astro.url.pathname;
+if (repository && canonicalPath !== Astro.url.pathname) {
+	return Astro.redirect(canonicalPath, 301);
+}
+
+const repositoryName = repository
+	? `${repository.repo_owner}/${repository.repo_name}`
+	: "Repository";
+const githubUrl = repository
+	? githubRepositoryUrl(repository.repo_owner, repository.repo_name)
+	: "https://github.com";
+const languageColor = repository ? sanitizeHexColor(repository.language_color) : null;
+const starChange = repository?.star_change ?? 0;
+const starChangeLabel = `${starChange >= 0 ? "+" : ""}${formatNumber(starChange)}`;
+---
+
+<Layout
+	title={`${repositoryName} Trending History — RepoTrend`}
+	description={`Explore every captured GitHub Trending appearance, rank, and daily star gain for ${repositoryName}.`}
+	ogType="profile"
+>
+	<div class="repository-page">
+		{hasError || !repository ? (
+			<ErrorFallback message="This repository's archive could not be loaded. Please try again." />
+		) : (
+			<>
+				<nav class="breadcrumbs" aria-label="Breadcrumb">
+					<a href="/trending">Archive</a>
+					<span aria-hidden="true">/</span>
+					<span aria-current="page">Repository history</span>
+				</nav>
+
+				<header class="repository-header">
+					<div class="repository-heading">
+						<p class="repository-kicker">Repository archive</p>
+						<h1>
+							<span>{repository.repo_owner}</span><span class="separator">/</span><strong>{repository.repo_name}</strong>
+						</h1>
+						{repository.description && <p class="repository-description">{repository.description}</p>}
+					</div>
+					<a class="github-action" href={githubUrl} target="_blank" rel="noopener noreferrer">
+						Open on GitHub <span aria-hidden="true">↗</span>
+						<span class="sr-only">(opens in new tab)</span>
+					</a>
+				</header>
+
+				<div class="repository-taxonomy">
+					{repository.language && (
+						<a href={`/search?language=${encodeURIComponent(repository.language)}`} class="language-link">
+							<span
+								class="language-dot"
+								aria-hidden="true"
+								style={languageColor ? `background-color: ${languageColor}` : undefined}
+							/>
+							{repository.language}
+						</a>
+					)}
+					{repository.topics.length > 0 && (
+						<ul aria-label="Repository topics">
+							{repository.topics.map((topic) => (
+								<li><a href={`/search?topic=${encodeURIComponent(topic)}`}>#{topic}</a></li>
+							))}
+						</ul>
+					)}
+				</div>
+
+				<section class="history-summary" aria-labelledby="history-summary-heading">
+					<h2 id="history-summary-heading">Archive summary</h2>
+					<dl>
+						<div>
+							<dt>Appearances</dt>
+							<dd>{formatNumber(repository.appearance_count)}</dd>
+						</div>
+						<div>
+							<dt>Best rank</dt>
+							<dd>{repository.best_rank ? `#${repository.best_rank}` : "Not recorded"}</dd>
+						</div>
+						<div>
+							<dt>Captured daily star gains</dt>
+							<dd>+{formatNumber(repository.total_stars_gained)}</dd>
+						</div>
+						<div>
+							<dt>Recorded total-star change</dt>
+							<dd>{starChangeLabel}</dd>
+						</div>
+					</dl>
+					<p>
+						First captured <a href={`/trending/${repository.first_appearance}`}>{formatDateDisplay(repository.first_appearance)}</a>;
+						 latest captured <a href={`/trending/${repository.latest_appearance}`}>{formatDateDisplay(repository.latest_appearance)}</a>.
+					</p>
+				</section>
+
+				<section class="appearance-history" aria-labelledby="appearance-history-heading">
+					<div class="section-heading">
+						<h2 id="appearance-history-heading">Captured appearances</h2>
+						<p>Newest first. Open any date to see the repository in its original daily snapshot.</p>
+					</div>
+					<div class="history-table-wrap">
+						<table>
+							<thead>
+								<tr>
+									<th scope="col">Snapshot</th>
+									<th scope="col">Rank</th>
+									<th scope="col">Stars gained that day</th>
+									<th scope="col">Total stars</th>
+								</tr>
+							</thead>
+							<tbody>
+								{repository.appearances.map((appearance) => (
+									<tr>
+										<th scope="row">
+											<a href={`/trending/${appearance.date}`}>
+												<time datetime={appearance.date}>{formatDateDisplay(appearance.date)}</time>
+											</a>
+										</th>
+										<td>{appearance.rank ? `#${appearance.rank}` : "—"}</td>
+										<td class="stars-gained">+{formatNumber(appearance.stars_gained)}</td>
+										<td>{formatNumber(appearance.total_stars)}</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</>
+		)}
+	</div>
+</Layout>
+
+<style>
+	.repository-page {
+		max-width: 64rem;
+		margin: 0 auto;
+	}
+
+	.breadcrumbs {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+		color: var(--color-text-secondary);
+		font-size: 0.8125rem;
+	}
+
+	.breadcrumbs a,
+	.history-summary a {
+		color: var(--color-link);
+	}
+
+	.repository-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1.5rem;
+	}
+
+	.repository-kicker,
+	.repository-heading h1,
+	.repository-description {
+		margin: 0;
+	}
+
+	.repository-kicker {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+	}
+
+	.repository-heading h1 {
+		font-size: clamp(1.5rem, 5vw, 2.25rem);
+		line-height: 1.2;
+		overflow-wrap: anywhere;
+	}
+
+	.repository-heading h1 > span:first-child,
+	.separator {
+		color: var(--color-text-secondary);
+		font-weight: 400;
+	}
+
+	.separator {
+		padding: 0 0.125em;
+	}
+
+	.repository-description {
+		max-width: 44rem;
+		margin-top: 0.5rem;
+		color: var(--color-text-secondary);
+		line-height: 1.55;
+	}
+
+	.github-action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex: 0 0 auto;
+		min-height: 44px;
+		padding: 0.625rem 1rem;
+		border: 1px solid var(--color-accent);
+		border-radius: 6px;
+		background: var(--color-accent);
+		color: var(--color-accent-text);
+		font-size: 0.875rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+
+	.repository-taxonomy,
+	.repository-taxonomy ul {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.repository-taxonomy {
+		margin-top: 1rem;
+	}
+
+	.repository-taxonomy ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.repository-taxonomy a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		min-height: 32px;
+		padding: 0.25rem 0.625rem;
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		background: var(--color-bg-secondary);
+		color: var(--color-link);
+		font-size: 0.75rem;
+		text-decoration: none;
+	}
+
+	.history-summary,
+	.appearance-history {
+		margin-top: 2rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.history-summary h2,
+	.section-heading h2,
+	.section-heading p {
+		margin: 0;
+	}
+
+	.history-summary h2,
+	.section-heading h2 {
+		font-size: 1.25rem;
+	}
+
+	.history-summary dl {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.75rem;
+		margin: 1rem 0;
+	}
+
+	.history-summary dl > div {
+		padding: 0.875rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		background: var(--color-bg-secondary);
+	}
+
+	.history-summary dt {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+	}
+
+	.history-summary dd {
+		margin: 0.25rem 0 0;
+		font-size: 1.125rem;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.history-summary > p,
+	.section-heading p {
+		color: var(--color-text-secondary);
+		font-size: 0.875rem;
+	}
+
+	.section-heading p {
+		margin-top: 0.25rem;
+	}
+
+	.history-table-wrap {
+		max-width: 100%;
+		margin-top: 1rem;
+		overflow-x: auto;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+	}
+
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.875rem;
+		font-variant-numeric: tabular-nums;
+	}
+
+	th,
+	td {
+		padding: 0.75rem;
+		border-bottom: 1px solid var(--color-border);
+		text-align: left;
+		white-space: nowrap;
+	}
+
+	thead th {
+		background: var(--color-bg-secondary);
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+	}
+
+	tbody tr:last-child th,
+	tbody tr:last-child td {
+		border-bottom: 0;
+	}
+
+	tbody th {
+		font-weight: 500;
+	}
+
+	tbody a {
+		color: var(--color-link);
+	}
+
+	.stars-gained {
+		color: var(--color-stars-today);
+		font-weight: 600;
+	}
+
+	@media (max-width: 720px) {
+		.repository-header {
+			flex-direction: column;
+		}
+
+		.github-action {
+			width: 100%;
+		}
+
+		.history-summary dl {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 420px) {
+		.history-summary dl {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

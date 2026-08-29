@@ -1,6 +1,7 @@
 ---
 import { formatNumber } from "../lib/format";
 import type { ComparisonRow } from "../lib/comparison";
+import { githubRepositoryUrl, repositoryPath } from "../lib/repository";
 
 interface Props {
 	row: ComparisonRow;
@@ -11,7 +12,8 @@ interface Props {
 
 const { row, index, firstLabel, secondLabel } = Astro.props;
 const { repository } = row;
-const repoUrl = `https://github.com/${repository.repo_owner}/${repository.repo_name}`;
+const detailUrl = repositoryPath(repository.repo_owner, repository.repo_name);
+const githubUrl = githubRepositoryUrl(repository.repo_owner, repository.repo_name);
 const headingId = `comparison-${index}-${row.key}`.replace(/[^a-zA-Z0-9_-]/g, "-");
 const statusLabel =
 	row.status === "both" ? "In both" : row.status === "added" ? "Added" : "Removed";
@@ -37,15 +39,22 @@ const starDeltaLabel =
 	<div class="repository-summary">
 		<div class="repository-title-row">
 			<h2 id={headingId}>
-				<a href={repoUrl} target="_blank" rel="noopener noreferrer">
+				<a
+					href={detailUrl}
+					aria-label={`${repository.repo_owner}/${repository.repo_name}`}
+				>
 					<span class="repo-owner">{repository.repo_owner}</span><span class="repo-separator">/</span><span class="repo-name-text">{repository.repo_name}</span>
-					<span class="sr-only">(opens in new tab)</span>
 				</a>
 			</h2>
 			<span class:list={["comparison-status", `status-${row.status}`]}>{statusLabel}</span>
 		</div>
 		{repository.description && <p>{repository.description}</p>}
-		{repository.language && <span class="repository-language">{repository.language}</span>}
+		<div class="repository-links">
+			{repository.language && <span class="repository-language">{repository.language}</span>}
+			<a href={githubUrl} target="_blank" rel="noopener noreferrer">
+				GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (opens in new tab)</span>
+			</a>
+		</div>
 	</div>
 
 	<div class="snapshot-metrics">
@@ -142,11 +151,24 @@ const starDeltaLabel =
 		-webkit-line-clamp: 2;
 	}
 
-	.repository-language {
-		display: inline-block;
+	.repository-links {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
 		margin-top: 0.5rem;
+	}
+
+	.repository-language,
+	.repository-links a {
 		color: var(--color-text-secondary);
 		font-size: 0.75rem;
+	}
+
+	.repository-links a {
+		color: var(--color-link);
+		font-weight: 500;
+		text-decoration: none;
 	}
 
 	.comparison-status {

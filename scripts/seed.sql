@@ -201,6 +201,20 @@ INSERT INTO trending_repos (repo_owner, repo_name, description, language, langua
 ('pnpm', 'pnpm', 'Fast, disk space efficient package manager', 'TypeScript', '#3178C6', 28234, 906, 32, '2026-02-15', '2026-02-15T06:00:00Z'),
 ('openai', 'codex', 'A lightweight coding agent', 'Rust', '#DEA584', 15402, 456, 56, '2026-02-15', '2026-02-15T06:00:00Z');
 
+-- Preserve GitHub's source order for repository-history rank examples.
+WITH ranked_repos AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (PARTITION BY trending_date ORDER BY id ASC) AS rank_for_day
+  FROM trending_repos
+)
+UPDATE trending_repos
+SET daily_rank = (
+  SELECT rank_for_day
+  FROM ranked_repos
+  WHERE ranked_repos.id = trending_repos.id
+);
+
 -- Representative topics used by search/filter acceptance tests.
 UPDATE trending_repos
 SET topics_json = '["react","javascript","frontend"]'

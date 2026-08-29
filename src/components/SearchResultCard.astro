@@ -1,6 +1,7 @@
 ---
 import { formatDateDisplay } from "../lib/dates";
 import { formatNumber, sanitizeHexColor } from "../lib/format";
+import { githubRepositoryUrl, repositoryPath } from "../lib/repository";
 import type { SearchResult } from "../lib/search-types";
 
 interface Props {
@@ -9,7 +10,8 @@ interface Props {
 }
 
 const { repository, index } = Astro.props;
-const repoUrl = `https://github.com/${repository.repo_owner}/${repository.repo_name}`;
+const detailUrl = repositoryPath(repository.repo_owner, repository.repo_name);
+const githubUrl = githubRepositoryUrl(repository.repo_owner, repository.repo_name);
 const safeColor = sanitizeHexColor(repository.language_color);
 const headingId = `search-result-${index}-${repository.repo_owner}-${repository.repo_name}`.replace(
 	/[^a-zA-Z0-9_-]/g,
@@ -22,11 +24,13 @@ const remainingDates = repository.dates.slice(10);
 <article class="search-result-card" aria-labelledby={headingId}>
 	<div class="result-header">
 		<h2 class="repo-name" id={headingId}>
-			<a href={repoUrl} target="_blank" rel="noopener noreferrer">
+			<a
+				href={detailUrl}
+				aria-label={`${repository.repo_owner}/${repository.repo_name}`}
+			>
 				<span class="repo-owner">{repository.repo_owner}</span>
 				<span class="repo-separator">/</span>
 				<span class="repo-name-text">{repository.repo_name}</span>
-				<span class="sr-only">(opens in new tab)</span>
 			</a>
 		</h2>
 		<div class="result-meta">
@@ -50,6 +54,9 @@ const remainingDates = repository.dates.slice(10);
 				<span class="sr-only">Forks:</span>
 				{formatNumber(repository.forks)}
 			</span>
+			<a class="result-github-link" href={githubUrl} target="_blank" rel="noopener noreferrer">
+				GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (opens in new tab)</span>
+			</a>
 		</div>
 	</div>
 
@@ -114,6 +121,16 @@ const remainingDates = repository.dates.slice(10);
 		gap: 0.75rem;
 		color: var(--color-text-secondary);
 		font-size: 0.8125rem;
+	}
+
+	.result-github-link {
+		color: var(--color-link);
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.result-github-link:hover {
+		text-decoration: underline;
 	}
 
 	.language-filter {

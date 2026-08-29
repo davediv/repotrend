@@ -13,6 +13,13 @@ import {
 import { getMondayOfWeek, getSundayOfWeek, isValidDate, todayUTC } from "./dates";
 import { logError, logInfo } from "./log";
 import {
+	getRepositoryArchive,
+	getRepositoryIdentities,
+	isValidRepositoryPath,
+	type RepositoryArchive,
+	type RepositoryIdentity,
+} from "./repository";
+import {
 	getDateRepoCounts,
 	getLanguageDistribution,
 	getTrendingRepos,
@@ -30,6 +37,7 @@ const INDEX_CACHE_TTL_SECONDS = 300;
 const DAILY_REPOS_CACHE_VERSION = "v2";
 const WEEKLY_REPOS_CACHE_VERSION = "v2";
 const ARCHIVE_INDEX_CACHE_VERSION = "v1";
+const REPOSITORY_ARCHIVE_CACHE_VERSION = "v1";
 
 export interface ArchiveBindings {
 	DB: D1Database;
@@ -69,7 +77,8 @@ export type ArchiveValidationCode =
 	| "same_comparison_date"
 	| "comparison_order"
 	| "insufficient_snapshots"
-	| "snapshot_not_found";
+	| "snapshot_not_found"
+	| "invalid_repository";
 
 /** A user-correctable archive request problem shared by pages and JSON endpoints. */
 export class ArchiveValidationError extends Error {
@@ -404,6 +413,33 @@ export class ArchiveService {
 				row.status === "added" && row.second ? [row.second.repository] : [],
 			),
 		};
+	}
+
+	async getRepository(
+		owner: string | undefined,
+		repo: string | undefined,
+	): Promise<RepositoryArchive | null> {
+		if (!owner || !repo || !isValidRepositoryPath(owner, repo)) {
+			throw new ArchiveValidationError("Invalid repository path.", "invalid_repository", 404);
+		}
+
+		return this.cached({
+			key: `repository:${REPOSITORY_ARCHIVE_CACHE_VERSION}:${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+			expirationTtl: LIVE_CACHE_TTL_SECONDS,
+			shouldCache: (repository) => repository !== null,
+			context: { owner, repo, resource: "repository_archive" },
+			load: () => getRepositoryArchive(this.bindings.DB, owner, repo),
+		});
+	}
+
+	async getRepositoryIndex(): Promise<RepositoryIdentity[]> {
+		return this.cached({
+			key: `archive:repositories:${REPOSITORY_ARCHIVE_CACHE_VERSION}`,
+			expirationTtl: INDEX_CACHE_TTL_SECONDS,
+			shouldCache: (repositories) => repositories.length > 0,
+			context: { resource: "repository_index" },
+			load: () => getRepositoryIdentities(this.bindings.DB),
+		});
 	}
 
 	private async cached<T>({

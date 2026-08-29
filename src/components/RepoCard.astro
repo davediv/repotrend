@@ -2,6 +2,7 @@
 // Server-side repo card used for SSR rendering.
 // Shared styles live in src/styles/repo-card.css (imported globally via Layout.astro).
 import { formatNumber, sanitizeHexColor } from "../lib/format";
+import { githubRepositoryUrl, repositoryPath } from "../lib/repository";
 
 interface Props {
 	rank: number;
@@ -34,7 +35,8 @@ const {
 	appearances,
 } = Astro.props;
 
-const repoUrl = `https://github.com/${repoOwner}/${repoName}`;
+const detailUrl = repositoryPath(repoOwner, repoName);
+const githubUrl = githubRepositoryUrl(repoOwner, repoName);
 const safeColor = sanitizeHexColor(languageColor);
 const headingId = `repo-heading-${rank}`;
 const starsLabel = viewMode === "weekly" ? "this week" : "today";
@@ -49,11 +51,10 @@ const hiddenTopicCount = topics.length - visibleTopics.length;
 		<div class="repo-title-row">
 			<h2 class="repo-name" id={headingId}>
 				<span class="sr-only">#{rank}</span>
-				<a href={repoUrl} target="_blank" rel="noopener noreferrer">
+				<a href={detailUrl} aria-label={`${repoOwner}/${repoName}`}>
 					<span class="repo-owner">{repoOwner}</span>
 					<span class="repo-separator">/</span>
 					<span class="repo-name-text">{repoName}</span>
-					<span class="sr-only">(opens in new tab)</span>
 				</a>
 			</h2>
 			{appearances != null && (
@@ -127,6 +128,10 @@ const hiddenTopicCount = topics.length - visibleTopics.length;
 				<span class="sr-only">Stars gained </span>
 				{formatNumber(starsToday)} {starsLabel}
 			</span>
+
+			<a class="repo-github-link" href={githubUrl} target="_blank" rel="noopener noreferrer">
+				GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (opens in new tab)</span>
+			</a>
 		</div>
 	</div>
 </article>

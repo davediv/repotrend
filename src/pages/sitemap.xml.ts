@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { createArchiveService } from "../lib/archive-service";
+import { repositoryPath, type RepositoryIdentity } from "../lib/repository";
 
 export const prerender = false;
 
@@ -11,11 +12,14 @@ export const GET: APIRoute = async ({ locals, site }) => {
 	const origin = site?.origin ?? "https://repotrend.dev";
 
 	let dates: string[] = [];
-	try {
-		dates = (await createArchiveService(locals.runtime.env).getArchiveIndex()).dates;
-	} catch {
-		// Return a minimal sitemap with just the homepage on DB failure
-	}
+	let repositories: RepositoryIdentity[] = [];
+	const archive = createArchiveService(locals.runtime.env);
+	const [archiveIndex, repositoryIndex] = await Promise.allSettled([
+		archive.getArchiveIndex(),
+		archive.getRepositoryIndex(),
+	]);
+	if (archiveIndex.status === "fulfilled") dates = archiveIndex.value.dates;
+	if (repositoryIndex.status === "fulfilled") repositories = repositoryIndex.value;
 
 	const urls: { loc: string; lastmod?: string; changefreq: string; priority: string }[] = [];
 
@@ -33,6 +37,14 @@ export const GET: APIRoute = async ({ locals, site }) => {
 			loc: `${origin}/trending/${date}`,
 			changefreq: "never",
 			priority: "0.8",
+		});
+	}
+
+	for (const repository of repositories) {
+		urls.push({
+			loc: `${origin}${repositoryPath(repository.repo_owner, repository.repo_name)}`,
+			changefreq: "daily",
+			priority: "0.7",
 		});
 	}
 

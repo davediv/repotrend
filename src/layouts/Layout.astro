@@ -18,7 +18,11 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 const pathname = Astro.url.pathname;
 const primaryNavigation = [
 	{ href: "/", label: "Today", active: pathname === "/" },
-	{ href: "/trending", label: "Archive", active: pathname.startsWith("/trending") },
+	{
+		href: "/trending",
+		label: "Archive",
+		active: pathname.startsWith("/trending") || pathname.startsWith("/repos/"),
+	},
 	{ href: "/compare", label: "Compare", active: pathname === "/compare" },
 ];
 ---

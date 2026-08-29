@@ -51,7 +51,8 @@ test.describe("Homepage", () => {
 		const firstCard = page.locator(".repo-card").first();
 		await expect(firstCard.locator(".repo-rank")).toBeVisible();
 		await expect(firstCard.locator(".repo-name")).toBeVisible();
-		await expect(firstCard.locator(".repo-name a")).toHaveAttribute(
+		await expect(firstCard.locator(".repo-name a")).toHaveAttribute("href", /^\/repos\//);
+		await expect(firstCard.locator(".repo-github-link")).toHaveAttribute(
 			"href",
 			/^https:\/\/github\.com\//,
 		);
