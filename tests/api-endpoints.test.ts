@@ -438,10 +438,11 @@ describe("GET /api/trending/week/[date]", () => {
 				week_start: "2026-02-09",
 				week_end: "2026-02-15",
 				partial: true,
+				days_captured: 3,
 				repos: [],
 			});
 			const { db, calls } = mockDB();
-			const { kv } = mockKV({ "trending:week:2026-02-09": cached });
+			const { kv } = mockKV({ "trending:week:v2:2026-02-09": cached });
 
 			const res = await getWeeklyTrending(apiContext({ params: { date: MOCK_TODAY }, db, kv }));
 			expect(res.status).toBe(200);
@@ -455,7 +456,7 @@ describe("GET /api/trending/week/[date]", () => {
 			await getWeeklyTrending(apiContext({ params: { date: PAST_WEEK_DATE }, db, kv }));
 			expect(puts.length).toBeGreaterThanOrEqual(1);
 			// Past week date 2026-02-01 → Monday = 2026-01-26
-			expect(puts[0].key).toBe("trending:week:2026-01-26");
+			expect(puts[0].key).toBe("trending:week:v2:2026-01-26");
 		});
 
 		it("uses immutable Cache-Control for past weeks", async () => {
@@ -486,11 +487,13 @@ describe("GET /api/trending/week/[date]", () => {
 				week_start: string;
 				week_end: string;
 				partial: boolean;
+				days_captured: number;
 				repos: Array<{ appearances: number }>;
 			};
 			expect(body.week_start).toBe("2026-01-26");
 			expect(body.week_end).toBe("2026-02-01");
 			expect(body).toHaveProperty("partial");
+			expect(body.days_captured).toBe(5);
 			expect(body.repos).toHaveLength(1);
 			expect(body.repos[0].appearances).toBe(5);
 			expect(body.repos[0]).not.toHaveProperty("days_in_week");

@@ -205,6 +205,7 @@ export interface WeeklyTrendingResponse {
 	week_start: string;
 	week_end: string;
 	partial: boolean;
+	days_captured: number;
 	repos: WeeklyTrendingRepo[];
 }
 

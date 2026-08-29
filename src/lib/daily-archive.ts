@@ -9,12 +9,20 @@ export type DailyArchiveSelection =
 	| { mode: "latest"; throughDate: string }
 	| { mode: "exact"; date: string };
 
+export type ArchiveResourceState = "ready" | "unavailable";
+
+export interface ArchiveSupportState {
+	languages: ArchiveResourceState;
+	dateIndex: ArchiveResourceState;
+}
+
 export interface DailyArchiveData {
 	selectedDate: string;
 	snapshot: DateRepoCount | null;
 	repos: TrendingRepo[];
 	languages: LanguageDistribution[];
 	dateCounts: DateRepoCount[];
+	support: ArchiveSupportState;
 }
 
 /** Resolve a canonical date and matching snapshot for a daily archive request. */

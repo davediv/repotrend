@@ -118,6 +118,10 @@ test.describe("Date Navigation", () => {
 			"href",
 			"/",
 		);
+		await expect(page.getByRole("link", { name: "Search archive" })).toHaveAttribute(
+			"href",
+			"/search",
+		);
 	});
 
 	test("previous navigation works without JavaScript", async ({ browser, baseURL }) => {

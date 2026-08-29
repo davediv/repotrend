@@ -17,7 +17,7 @@ interface Props {
 }
 
 const { data, today, context, hasError = false } = Astro.props;
-const { selectedDate, snapshot, repos, languages, dateCounts } = data;
+const { selectedDate, snapshot, repos, languages, dateCounts, support } = data;
 const hasSnapshot = snapshot !== null;
 const isTodaySnapshot = hasSnapshot && selectedDate === today;
 const isLatestView = context === "latest";
@@ -69,6 +69,7 @@ if (!hasSnapshot && !hasError) {
 	if (latestDate) {
 		emptyActions.push({ href: "/", label: "View latest snapshot", primary: true });
 	}
+	emptyActions.push({ href: "/search", label: "Search archive" });
 }
 ---
 
@@ -109,6 +110,8 @@ if (!hasSnapshot && !hasError) {
 			languages={languages}
 			dateCounts={dateCounts}
 			selectedDate={selectedDate}
+			languagesState={support.languages}
+			dateIndexState={support.dateIndex}
 		/>
 	</div>
 </Layout>

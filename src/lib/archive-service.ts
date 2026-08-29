@@ -5,6 +5,7 @@ import {
 	type ComparisonRow,
 } from "./comparison";
 import {
+	type ArchiveSupportState,
 	type DailyArchiveData,
 	type DailyArchiveSelection,
 	resolveDailyArchiveSelection,
@@ -27,6 +28,7 @@ const LIVE_CACHE_TTL_SECONDS = 3600;
 const INDEX_CACHE_TTL_SECONDS = 300;
 
 const DAILY_REPOS_CACHE_VERSION = "v2";
+const WEEKLY_REPOS_CACHE_VERSION = "v2";
 const ARCHIVE_INDEX_CACHE_VERSION = "v1";
 
 export interface ArchiveBindings {
@@ -44,6 +46,7 @@ export interface ArchiveIndexData {
 export interface WeeklyArchiveData extends WeeklyTrendingResponse {
 	languages: LanguageDistribution[];
 	dateCounts: DateRepoCount[];
+	support: ArchiveSupportState;
 }
 
 export interface ArchiveComparisonData {
@@ -217,25 +220,66 @@ export class ArchiveService {
 	}
 
 	async getDailyArchive(selection: DailyArchiveSelection): Promise<DailyArchiveData> {
-		if (selection.mode === "latest") {
-			this.validateDate(selection.throughDate);
-		} else {
-			this.validateDate(selection.date);
+		const requestedDate =
+			selection.mode === "latest"
+				? this.validateDate(selection.throughDate)
+				: this.validateDate(selection.date);
+		let archiveIndex: ArchiveIndexData | null = null;
+
+		try {
+			archiveIndex = await this.getArchiveIndex();
+		} catch (error) {
+			if (selection.mode === "latest") throw error;
+			logError("archive_supporting_query_error", {
+				view: "daily",
+				date: requestedDate,
+				resource: "date_index",
+			})(error);
 		}
 
-		const { snapshots } = await this.getArchiveIndex();
-		const resolved = resolveDailyArchiveSelection(snapshots, selection);
+		const dateCounts = archiveIndex?.snapshots ?? [];
+		let resolved = archiveIndex
+			? resolveDailyArchiveSelection(dateCounts, selection)
+			: { selectedDate: requestedDate, snapshot: null };
+		let repos: TrendingRepo[] = [];
+
+		if (resolved.snapshot) {
+			repos = await this.getDailyRepos(resolved.selectedDate);
+		} else if (!archiveIndex && selection.mode === "exact") {
+			repos = await this.getDailyRepos(resolved.selectedDate);
+			if (repos.length > 0) {
+				resolved = {
+					...resolved,
+					snapshot: { date: resolved.selectedDate, count: repos.length, scraped_at: null },
+				};
+			}
+		}
+
+		const support: ArchiveSupportState = {
+			languages: "ready",
+			dateIndex: archiveIndex ? "ready" : "unavailable",
+		};
+		if (selection.mode === "latest") {
+			support.dateIndex = "ready";
+		}
 
 		if (!resolved.snapshot) {
-			return { ...resolved, repos: [], languages: [], dateCounts: snapshots };
+			return { ...resolved, repos, languages: [], dateCounts, support };
 		}
 
-		const [repos, languages] = await Promise.all([
-			this.getDailyRepos(resolved.selectedDate),
-			this.getDailyLanguages(resolved.selectedDate),
-		]);
+		let languages: LanguageDistribution[] = [];
+		try {
+			languages = await this.getDailyLanguages(resolved.selectedDate);
+		} catch (error) {
+			support.languages = "unavailable";
+			logError("archive_supporting_query_error", {
+				view: "daily",
+				date: resolved.selectedDate,
+				resource: "languages",
+			})(error);
+		}
 
-		return { ...resolved, repos, languages, dateCounts: snapshots };
+		return { ...resolved, repos, languages, dateCounts, support };
 	}
 
 	async getWeeklySnapshot(rawDate: string): Promise<WeeklyTrendingResponse> {
@@ -245,7 +289,7 @@ export class ArchiveService {
 		const isCurrentWeek = weekStart <= this.today && this.today <= weekEnd;
 
 		return this.cached({
-			key: `trending:week:${weekStart}`,
+			key: `trending:week:${WEEKLY_REPOS_CACHE_VERSION}:${weekStart}`,
 			expirationTtl: isCurrentWeek ? LIVE_CACHE_TTL_SECONDS : undefined,
 			shouldCache: ({ repos }) => repos.length > 0,
 			context: { weekStart, resource: "weekly_repositories" },
@@ -255,6 +299,7 @@ export class ArchiveService {
 					week_start: weekStart,
 					week_end: weekEnd,
 					partial: weekEnd > this.today || result.daysWithData < 7,
+					days_captured: result.daysWithData,
 					repos: result.repos,
 				};
 			},
@@ -278,12 +323,38 @@ export class ArchiveService {
 
 	async getWeeklyArchive(rawDate: string): Promise<WeeklyArchiveData> {
 		const date = this.validateDate(rawDate);
-		const [snapshot, languages, archiveIndex] = await Promise.all([
-			this.getWeeklySnapshot(date),
+		const snapshot = await this.getWeeklySnapshot(date);
+		const [languageResult, archiveIndexResult] = await Promise.allSettled([
 			this.getWeeklyLanguages(date),
 			this.getArchiveIndex(),
 		]);
-		return { ...snapshot, languages, dateCounts: archiveIndex.snapshots };
+		const support: ArchiveSupportState = {
+			languages: languageResult.status === "fulfilled" ? "ready" : "unavailable",
+			dateIndex: archiveIndexResult.status === "fulfilled" ? "ready" : "unavailable",
+		};
+
+		if (languageResult.status === "rejected") {
+			logError("archive_supporting_query_error", {
+				view: "weekly",
+				date,
+				resource: "languages",
+			})(languageResult.reason);
+		}
+		if (archiveIndexResult.status === "rejected") {
+			logError("archive_supporting_query_error", {
+				view: "weekly",
+				date,
+				resource: "date_index",
+			})(archiveIndexResult.reason);
+		}
+
+		return {
+			...snapshot,
+			languages: languageResult.status === "fulfilled" ? languageResult.value : [],
+			dateCounts:
+				archiveIndexResult.status === "fulfilled" ? archiveIndexResult.value.snapshots : [],
+			support,
+		};
 	}
 
 	async getComparison(

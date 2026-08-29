@@ -19,7 +19,7 @@ function cacheStore() {
 	return { kv, puts, values };
 }
 
-function archiveDatabase() {
+function archiveDatabase(options: { failLanguages?: boolean } = {}) {
 	const prepared: string[] = [];
 	const db = {
 		prepare(sql: string) {
@@ -52,6 +52,7 @@ function archiveDatabase() {
 							],
 						};
 					}
+					if (options.failLanguages) throw new Error("language query unavailable");
 					return {
 						results: [{ language: "Rust", color: "#dea584", count: 1 }],
 					};
@@ -104,5 +105,16 @@ describe("ArchiveService", () => {
 		const error = await archive.getComparison("2026-02-15", "2026-02-14").catch((reason) => reason);
 		expect(error).toBeInstanceOf(ArchiveValidationError);
 		expect(error).toMatchObject({ code: "comparison_order", status: 400 });
+	});
+
+	it("keeps primary results while marking failed supporting analytics unavailable", async () => {
+		const { db } = archiveDatabase({ failLanguages: true });
+		const archive = createArchiveService({ DB: db }, { today: "2026-02-15" });
+
+		const result = await archive.getDailyArchive({ mode: "exact", date: "2026-02-14" });
+
+		expect(result.repos).toHaveLength(1);
+		expect(result.languages).toEqual([]);
+		expect(result.support).toEqual({ languages: "unavailable", dateIndex: "ready" });
 	});
 });

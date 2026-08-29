@@ -2,6 +2,7 @@
 import CalendarHeatmap from "./CalendarHeatmap.astro";
 import ArchiveDateBrowser from "./ArchiveDateBrowser.astro";
 import LanguageChart from "./LanguageChart.astro";
+import type { ArchiveResourceState } from "../lib/daily-archive";
 import type { DateRepoCount, LanguageDistribution } from "../lib/trending";
 
 interface Props {
@@ -9,10 +10,25 @@ interface Props {
 	dateCounts: DateRepoCount[];
 	selectedDate: string;
 	viewMode?: "daily" | "weekly";
+	languagesState?: ArchiveResourceState;
+	dateIndexState?: ArchiveResourceState;
 }
 
-const { languages, dateCounts, selectedDate, viewMode = "daily" } = Astro.props;
-const hasInsights = languages.length > 0 || dateCounts.length > 0;
+const {
+	languages,
+	dateCounts,
+	selectedDate,
+	viewMode = "daily",
+	languagesState = "ready",
+	dateIndexState = "ready",
+} = Astro.props;
+const unavailableResources = [
+	...(languagesState === "unavailable" ? ["language distribution"] : []),
+	...(dateIndexState === "unavailable" ? ["archive activity"] : []),
+];
+const hasDegradedInsights = unavailableResources.length > 0;
+const hasInsights = languages.length > 0 || dateCounts.length > 0 || hasDegradedInsights;
+const retryHref = `${Astro.url.pathname}${Astro.url.search}#archive-insights`;
 ---
 
 {hasInsights && (
@@ -21,17 +37,35 @@ const hasInsights = languages.length > 0 || dateCounts.length > 0;
 			<h2 id="archive-insights-heading">Insights</h2>
 			<p>Browse available periods, then explore language mix and archive activity.</p>
 		</div>
-		<ArchiveDateBrowser
-			dateCounts={dateCounts}
-			selectedDate={selectedDate}
-			viewMode={viewMode}
-		/>
-		<LanguageChart languages={languages} />
-		<CalendarHeatmap
-			dateCounts={dateCounts}
-			selectedDate={selectedDate}
-			viewMode={viewMode}
-		/>
+		{hasDegradedInsights && (
+			<div class="insights-degraded" role="status">
+				<div>
+					<h3>Some insights are temporarily unavailable</h3>
+					<p>
+						The {unavailableResources.join(" and ")} could not be loaded. Repository rankings
+						 remain available and are not shown as zero-data analytics.
+					</p>
+				</div>
+				<a href={retryHref}>Retry insights</a>
+			</div>
+		)}
+		{dateIndexState === "ready" && dateCounts.length > 0 && (
+			<>
+				<ArchiveDateBrowser
+					dateCounts={dateCounts}
+					selectedDate={selectedDate}
+					viewMode={viewMode}
+				/>
+				<CalendarHeatmap
+					dateCounts={dateCounts}
+					selectedDate={selectedDate}
+					viewMode={viewMode}
+				/>
+			</>
+		)}
+		{languagesState === "ready" && languages.length > 0 && (
+			<LanguageChart languages={languages} />
+		)}
 	</section>
 )}
 
@@ -59,5 +93,54 @@ const hasInsights = languages.length > 0 || dateCounts.length > 0;
 		margin-top: 0.25rem;
 		color: var(--color-text-secondary);
 		font-size: 0.875rem;
+	}
+
+	.insights-degraded {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1rem;
+		padding: 0.875rem 1rem;
+		border: 1px solid var(--color-border);
+		border-left: 3px solid var(--color-stars-today);
+		border-radius: 6px;
+		background: var(--color-bg-secondary);
+	}
+
+	.insights-degraded h3,
+	.insights-degraded p {
+		margin: 0;
+	}
+
+	.insights-degraded h3 {
+		font-size: 0.9375rem;
+	}
+
+	.insights-degraded p {
+		margin-top: 0.25rem;
+		color: var(--color-text-secondary);
+		font-size: 0.8125rem;
+	}
+
+	.insights-degraded a {
+		flex: 0 0 auto;
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		color: var(--color-link);
+		font-size: 0.8125rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+
+	@media (max-width: 640px) {
+		.insights-degraded {
+			align-items: flex-start;
+			flex-direction: column;
+		}
 	}
 </style>

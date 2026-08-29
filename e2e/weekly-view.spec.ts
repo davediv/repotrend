@@ -15,6 +15,17 @@ test.describe("Weekly Archive", () => {
 		).toBeVisible();
 	});
 
+	test("partial weeks disclose captured-day coverage", async ({ page }) => {
+		const now = new Date();
+		const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+		monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+		const mondayDate = monday.toISOString().slice(0, 10);
+
+		await page.goto(`/trending/week/${mondayDate}`);
+		await expect(page.locator(".partial-notice")).toContainText("of 7 daily snapshot");
+		await expect(page.locator(".partial-notice")).toContainText("Rankings may change");
+	});
+
 	test("weekly view renders toolbar and sort dropdown", async ({ page }) => {
 		await page.goto("/trending/week/2026-02-09");
 		// The toolbar, date picker, and sort dropdown render regardless of D1 query result
