@@ -9,7 +9,7 @@
 		"astro": "astro",
 		"deploy": "astro build && node scripts/inject-scheduled.mjs && wrangler deploy",
 		"cf-typegen": "wrangler types",
-		"db:seed": "wrangler d1 execute repotrend-db --local --file=./scripts/seed.sql",
+		"db:seed": "wrangler d1 execute repotrend --local --file=./scripts/seed.sql",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"format:check": "biome format .",

@@ -1,5 +1,5 @@
 -- Seed: 25 sample trending repos across 7 days (2026-02-09 .. 2026-02-15)
--- Run: npm run db:seed (uses wrangler d1 execute repotrend-db --local --file=./scripts/seed.sql)
+-- Run: npm run db:seed (uses wrangler d1 execute repotrend --local --file=./scripts/seed.sql)
 -- Re-running clears existing seed data so the script is idempotent for local dev.
 
 DELETE FROM trending_repos;
@@ -200,3 +200,36 @@ INSERT INTO trending_repos (repo_owner, repo_name, description, language, langua
 ('TanStack', 'router', 'Type-safe routing for TypeScript', 'TypeScript', '#3178C6', 21204, 906, 27, '2026-02-15', '2026-02-15T06:00:00Z'),
 ('pnpm', 'pnpm', 'Fast, disk space efficient package manager', 'TypeScript', '#3178C6', 28234, 906, 32, '2026-02-15', '2026-02-15T06:00:00Z'),
 ('biomejs', 'biome', 'Toolchain for the web', 'Rust', '#DEA584', 15402, 456, 56, '2026-02-15', '2026-02-15T06:00:00Z');
+
+-- Give local/E2E development a real "today" snapshot while retaining the
+-- fixed historical dates used by navigation tests.
+INSERT OR REPLACE INTO trending_repos (
+  repo_owner,
+  repo_name,
+  description,
+  language,
+  language_color,
+  total_stars,
+  forks,
+  stars_today,
+  trending_date,
+  scraped_at,
+  topics_json,
+  daily_rank
+)
+SELECT
+  repo_owner,
+  repo_name,
+  description,
+  language,
+  language_color,
+  total_stars,
+  forks,
+  stars_today,
+  DATE('now'),
+  STRFTIME('%Y-%m-%dT%H:%M:%SZ', 'now'),
+  topics_json,
+  ROW_NUMBER() OVER (ORDER BY id ASC)
+FROM trending_repos
+WHERE trending_date = '2026-02-15'
+  AND DATE('now') <> '2026-02-15';

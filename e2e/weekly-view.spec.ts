@@ -1,12 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Weekly View", () => {
-	test("clicking Weekly toggle navigates to weekly URL", async ({ page }) => {
+test.describe("Legacy Weekly Archive", () => {
+	test("daily pages do not promote a weekly-frequency view", async ({ page }) => {
 		await page.goto("/trending/2026-02-12");
-		const weeklyBtn = page.locator(".view-toggle-btn").last();
-		await expect(weeklyBtn).toContainText("Weekly");
-		await weeklyBtn.click();
-		await page.waitForURL(/\/trending\/week\//);
+		await expect(page.locator(".view-toggle")).toHaveCount(0);
 	});
 
 	test("weekly view page loads with title containing week range", async ({ page }) => {

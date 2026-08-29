@@ -156,6 +156,8 @@ export interface TrendingRepo {
 	total_stars: number;
 	forks: number;
 	stars_today: number;
+	/** Position on GitHub's daily Trending page at scrape time. */
+	daily_rank?: number;
 	topics?: string[];
 	/** Consecutive-day trending streak ending on the queried date (1 = single day). */
 	streak?: number;
@@ -203,17 +205,17 @@ export function parseTopicsJson(topicsJson: string | null | undefined): string[]
 }
 
 /**
- * Query trending repos for a given date from D1, ordered by stars_today descending.
+ * Query the unique daily snapshot in the same order GitHub returned it.
  * Throws on D1 errors — callers must handle failures.
  */
 export async function getTrendingRepos(db: D1Database, date: string): Promise<TrendingRepo[]> {
 	const { results } = await db
 		.prepare(
 			`SELECT repo_owner, repo_name, description, language, language_color,
-		            total_stars, forks, stars_today, topics_json
+		            total_stars, forks, stars_today, daily_rank, topics_json
 		       FROM trending_repos
 		      WHERE trending_date = ?
-		      ORDER BY stars_today DESC`,
+		      ORDER BY daily_rank ASC, id ASC`,
 		)
 		.bind(date)
 		.all<TrendingRepo & { topics_json: string | null }>();

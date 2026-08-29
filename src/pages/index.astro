@@ -2,56 +2,37 @@
 import Layout from "../layouts/Layout.astro";
 import DatePicker from "../components/DatePicker.astro";
 import Toolbar from "../components/Toolbar.astro";
-import ViewToggle from "../components/ViewToggle.astro";
-import SortDropdown from "../components/SortDropdown.astro";
 import RepoCardList from "../components/RepoCardList.astro";
 import ErrorFallback from "../components/ErrorFallback.astro";
-import { todayUTC } from "../lib/dates";
+import { formatDateDisplay, todayUTC } from "../lib/dates";
 import { logError } from "../lib/log";
 import {
 	getDateRepoCounts,
 	getLanguageDistribution,
-	getTrendingReposWithStreaks,
+	getTrendingRepos,
 	type DateRepoCount,
 	type LanguageDistribution,
 	type TrendingRepo,
 } from "../lib/trending";
-import { parseSortParam, sortDailyRepos } from "../lib/sort";
 import LanguageChart from "../components/LanguageChart.astro";
-import CalendarHeatmap from "../components/CalendarHeatmap.astro";
 
 export const prerender = false;
 
 const today = todayUTC();
-let effectiveDate = today;
+const todayLabel = formatDateDisplay(today);
 let repos: TrendingRepo[] = [];
 let languages: LanguageDistribution[] = [];
 let dateCounts: DateRepoCount[] = [];
 let hasError = false;
-const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
 try {
 	const db = Astro.locals.runtime.env.DB;
-	const { results } = await db
-		.prepare(
-			`SELECT trending_date FROM trending_repos
-			 WHERE trending_date <= ?
-			 ORDER BY trending_date DESC
-			 LIMIT 1`,
-		)
-		.bind(today)
-		.all<{ trending_date: string }>();
-
-	if (results.length > 0) {
-		effectiveDate = results[0].trending_date;
-	}
-
 	const [trendingRepos, languageResult, dateCountResult] = await Promise.all([
-		getTrendingReposWithStreaks(db, effectiveDate),
-		getLanguageDistribution(db, effectiveDate).catch(() => []),
+		getTrendingRepos(db, today),
+		getLanguageDistribution(db, today).catch(() => []),
 		getDateRepoCounts(db).catch(() => []),
 	]);
-	repos = sortDailyRepos(trendingRepos, sort);
+	repos = trendingRepos;
 	languages = languageResult;
 	dateCounts = dateCountResult;
 } catch (error) {
@@ -61,19 +42,53 @@ try {
 ---
 
 <Layout
-	title="RepoTrend — GitHub Trending Archive"
-	description="Browse the historical archive of GitHub trending repositories, daily and weekly."
+	title="GitHub Trending Today — RepoTrend"
+	description="See the unique repositories trending on GitHub today, in the same order as GitHub's daily Trending page."
 >
 	<Toolbar>
+		<div class="today-heading">
+			<p>Daily GitHub snapshot</p>
+			<h1>Trending today</h1>
+			<time datetime={today}>{todayLabel}</time>
+		</div>
 		<DatePicker
-			selectedDate={effectiveDate}
+			selectedDate={today}
 			viewMode="daily"
 			availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
 		/>
-		<ViewToggle activeView="daily" currentDate={effectiveDate} />
-		<SortDropdown activeSort={sort} />
 	</Toolbar>
 	<LanguageChart languages={languages} />
-	<CalendarHeatmap dateCounts={dateCounts} selectedDate={effectiveDate} />
-	{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} />}
+	{hasError ? (
+		<ErrorFallback />
+	) : (
+		<RepoCardList
+			repos={repos}
+			emptyMessage="Today's GitHub Trending snapshot is not available yet."
+		/>
+	)}
 </Layout>
+
+<style>
+	.today-heading p,
+	.today-heading h1 {
+		margin: 0;
+	}
+
+	.today-heading p {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.today-heading h1 {
+		font-size: 1.5rem;
+		line-height: 1.3;
+	}
+
+	.today-heading time {
+		color: var(--color-text-secondary);
+		font-size: 0.875rem;
+	}
+</style>

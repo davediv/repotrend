@@ -31,7 +31,19 @@ export function parseTrendingPage(html: string): ParsedRepo[] {
 		);
 	}
 
-	return articles.map(parseArticle);
+	const seen = new Set<string>();
+	const repos: ParsedRepo[] = [];
+
+	for (const article of articles) {
+		const repo = parseArticle(article);
+		const key = `${repo.repo_owner}/${repo.repo_name}`.toLowerCase();
+		if (seen.has(key)) continue;
+
+		seen.add(key);
+		repos.push(repo);
+	}
+
+	return repos;
 }
 
 /**

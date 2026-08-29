@@ -1,5 +1,5 @@
 # RepoTrend
-RepoTrend is a web app that archives and displays daily GitHub trending repositories, enabling users to browse historical trends, spot patterns, and discover notable open-source projects over time.
+RepoTrend archives GitHub's daily Trending snapshot. The homepage shows today's unique repositories in GitHub's original ranking order; dated pages provide the daily archive.
 
 ## Tech Stack:
 - Astro

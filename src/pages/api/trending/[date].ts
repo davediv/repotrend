@@ -1,13 +1,7 @@
 import type { APIRoute } from "astro";
 import { isValidDate, todayUTC } from "../../../lib/dates";
 import { logError } from "../../../lib/log";
-import {
-	calculateStreaks,
-	detectNewEntries,
-	fetchStarHistory,
-	parseTopicsJson,
-	type TrendingRepo,
-} from "../../../lib/trending";
+import { parseTopicsJson, type TrendingRepo } from "../../../lib/trending";
 
 export const prerender = false;
 
@@ -31,7 +25,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
 	}
 
 	const { DB: db, CACHE: kv } = locals.runtime.env;
-	const cacheKey = `trending:${date}`;
+	// Versioned because v2 is a pure daily snapshot in GitHub's source order.
+	const cacheKey = `trending:daily:v2:${date}`;
 	const isToday = date === todayUTC();
 	const cacheControl = isToday
 		? "public, max-age=300, s-maxage=300"
@@ -71,10 +66,10 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		({ results: rows } = await db
 			.prepare(
 				`SELECT repo_owner, repo_name, description, language, language_color,
-                total_stars, forks, stars_today, topics_json, trending_date, scraped_at
-           FROM trending_repos
-          WHERE trending_date = ?
-          ORDER BY stars_today DESC`,
+				        total_stars, forks, stars_today, daily_rank, topics_json, trending_date, scraped_at
+				   FROM trending_repos
+				  WHERE trending_date = ?
+				  ORDER BY daily_rank ASC, id ASC`,
 			)
 			.bind(date)
 			.all<TrendingRow>());
@@ -90,36 +85,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
 		topics: parseTopicsJson(topics_json),
 	}));
 
-	// 3–5. Enrich results with streak, new-entry, and star-history data.
-	// NOTE: This mirrors getTrendingReposWithStreaks() — keep in sync.
-	// The API endpoint uses its own query (for trending_date/scraped_at columns)
-	// so cannot reuse the wrapper directly.
-
-	// 3. Calculate trending streaks for each repo
-	try {
-		await calculateStreaks(db, date, results);
-	} catch (error) {
-		logError("streak_calc_error", { date })(error);
-		// Non-fatal: results are still valid without streaks
-	}
-
-	// 4. Detect first-time trending repos
-	try {
-		await detectNewEntries(db, date, results);
-	} catch (error) {
-		logError("new_entry_detect_error", { date })(error);
-		// Non-fatal: results are still valid without new-entry flags
-	}
-
-	// 5. Attach star history for sparkline rendering
-	try {
-		await fetchStarHistory(db, date, results);
-	} catch (error) {
-		logError("star_history_error", { date })(error);
-		// Non-fatal: results are still valid without star history
-	}
-
-	// 6. Populate KV cache (skip empty results to allow future backfills)
+	// 3. Populate KV cache (skip empty results to allow a later same-day scrape)
 	const json = JSON.stringify(results);
 	if (results.length > 0) {
 		try {

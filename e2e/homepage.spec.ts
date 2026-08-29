@@ -3,12 +3,12 @@ import { expect, test } from "@playwright/test";
 test.describe("Homepage", () => {
 	test("loads with correct page title", async ({ page }) => {
 		await page.goto("/");
-		await expect(page).toHaveTitle("RepoTrend — GitHub Trending Archive");
+		await expect(page).toHaveTitle("GitHub Trending Today — RepoTrend");
 	});
 
 	test("renders header with logo and tagline", async ({ page }) => {
 		await page.goto("/");
-		const header = page.locator("header");
+		const header = page.getByRole("banner");
 		await expect(header).toBeVisible();
 		await expect(header.locator(".logo")).toContainText("RepoTrend");
 		await expect(header).toContainText("GitHub Trending Archive");
@@ -30,13 +30,11 @@ test.describe("Homepage", () => {
 		await expect(page.locator(".date-display")).toBeVisible();
 	});
 
-	test("renders view toggle with Daily and Weekly options", async ({ page }) => {
+	test("identifies the page as today's daily GitHub snapshot", async ({ page }) => {
 		await page.goto("/");
-		const viewToggle = page.locator(".view-toggle");
-		await expect(viewToggle).toBeVisible();
-		await expect(viewToggle.locator(".view-toggle-btn")).toHaveCount(2);
-		await expect(viewToggle.locator(".view-toggle-btn").first()).toContainText("Daily");
-		await expect(viewToggle.locator(".view-toggle-btn").last()).toContainText("Weekly");
+		await expect(page.getByRole("heading", { level: 1, name: "Trending today" })).toBeVisible();
+		await expect(page.locator(".today-heading")).toContainText("Daily GitHub snapshot");
+		await expect(page.locator(".view-toggle")).toHaveCount(0);
 	});
 
 	test("renders 25 repository cards", async ({ page }) => {
@@ -63,22 +61,35 @@ test.describe("Homepage", () => {
 		await expect(cardWithLanguage).toBeVisible();
 	});
 
+	test("keeps GitHub's daily order and shows each repository once", async ({ page }) => {
+		await page.goto("/");
+		const owners = await page.locator(".repo-owner").allTextContents();
+		const repoNames = await page.locator(".repo-name-text").allTextContents();
+		const names = owners.map((owner, index) => `${owner}/${repoNames[index]}`);
+
+		expect(names.slice(0, 3)).toEqual(["vercel/next.js", "facebook/react", "microsoft/vscode"]);
+		expect(new Set(names).size).toBe(names.length);
+	});
+
+	test("does not show streak, history, weekly-frequency, or custom-sort UI", async ({ page }) => {
+		await page.goto("/");
+		await expect(page.locator(".streak-badge")).toHaveCount(0);
+		await expect(page.locator(".new-entry-badge")).toHaveCount(0);
+		await expect(page.locator(".sparkline")).toHaveCount(0);
+		await expect(page.locator(".appearances-badge")).toHaveCount(0);
+		await expect(page.locator("#sort-select")).toHaveCount(0);
+	});
+
 	test("renders language distribution chart", async ({ page }) => {
 		await page.goto("/");
 		const chart = page.locator(".language-chart");
 		await expect(chart).toBeVisible();
 	});
 
-	test("renders calendar heatmap", async ({ page }) => {
+	test("keeps the homepage focused on today's list", async ({ page }) => {
 		await page.goto("/");
 		const heatmap = page.locator(".calendar-heatmap");
-		await expect(heatmap).toBeVisible();
-	});
-
-	test("renders sort dropdown", async ({ page }) => {
-		await page.goto("/");
-		const sortDropdown = page.locator("#sort-select");
-		await expect(sortDropdown).toBeVisible();
+		await expect(heatmap).toHaveCount(0);
 	});
 
 	test("renders footer with attribution links", async ({ page }) => {

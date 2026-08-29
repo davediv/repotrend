@@ -230,7 +230,7 @@ describe("GET /api/trending/[date]", () => {
 		it("returns cached data on KV hit without querying D1", async () => {
 			const cached = JSON.stringify([sampleRepo()]);
 			const { db, calls } = mockDB();
-			const { kv } = mockKV({ [`trending:${PAST_DATE}`]: cached });
+			const { kv } = mockKV({ [`trending:daily:v2:${PAST_DATE}`]: cached });
 
 			const res = await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 			expect(res.status).toBe(200);
@@ -245,7 +245,7 @@ describe("GET /api/trending/[date]", () => {
 
 			await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 			expect(puts.length).toBeGreaterThanOrEqual(1);
-			expect(puts[0].key).toBe(`trending:${PAST_DATE}`);
+			expect(puts[0].key).toBe(`trending:daily:v2:${PAST_DATE}`);
 		});
 
 		it("does not cache empty results", async () => {
@@ -314,14 +314,15 @@ describe("GET /api/trending/[date]", () => {
 			expect(await res.json()).toEqual([]);
 		});
 
-		it("includes enrichment defaults when enrichment queries return empty", async () => {
+		it("returns a daily snapshot without historical enrichment", async () => {
 			const { db } = mockDB({ queryResultsByIndex: { 0: [sampleRepo()] } });
 			const { kv } = mockKV();
 			const res = await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
-			const body = (await res.json()) as Array<{ streak: number; is_new_entry: boolean }>;
-			expect(body[0].streak).toBe(1);
-			expect(body[0].is_new_entry).toBe(false);
+			const body = (await res.json()) as Array<Record<string, unknown>>;
+			expect(body[0]).not.toHaveProperty("streak");
+			expect(body[0]).not.toHaveProperty("is_new_entry");
+			expect(body[0]).not.toHaveProperty("star_history");
 		});
 	});
 
@@ -337,15 +338,8 @@ describe("GET /api/trending/[date]", () => {
 			expect(res.headers.get("Cache-Control")).toBe("no-store");
 		});
 
-		it("returns repos even when enrichment queries fail", async () => {
-			const { db } = mockDB({
-				queryResultsByIndex: { 0: [sampleRepo()] },
-				queryErrorAtIndex: {
-					1: new Error("streak fail"),
-					2: new Error("new-entry fail"),
-					3: new Error("history fail"),
-				},
-			});
+		it("performs only the daily snapshot query", async () => {
+			const { db, calls } = mockDB({ queryResultsByIndex: { 0: [sampleRepo()] } });
 			const { kv } = mockKV();
 			const res = await getTrending(apiContext({ params: { date: PAST_DATE }, db, kv }));
 
@@ -353,6 +347,7 @@ describe("GET /api/trending/[date]", () => {
 			const body = (await res.json()) as Array<{ repo_owner: string }>;
 			expect(body).toHaveLength(1);
 			expect(body[0].repo_owner).toBe("facebook");
+			expect(calls.prepare).toHaveLength(1);
 		});
 	});
 });

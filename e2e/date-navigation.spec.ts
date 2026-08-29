@@ -71,15 +71,12 @@ test.describe("Date Navigation", () => {
 		await expect(ranks.last()).toContainText("25");
 	});
 
-	test("sort dropdown reorders cards", async ({ page }) => {
+	test("daily archive preserves the captured GitHub order", async ({ page }) => {
 		await page.goto("/trending/2026-02-15");
 
-		await page.locator("#sort-select").selectOption("total_stars");
-		await page.waitForURL(/sort=total_stars/);
-
-		// After sorting by total_stars, the first card should be facebook/react (221,005 stars)
-		const firstOwner = await page.locator(".repo-owner").first().textContent();
-		expect(firstOwner).toBe("facebook");
+		const owners = await page.locator(".repo-owner").allTextContents();
+		expect(owners.slice(0, 3)).toEqual(["vercel", "facebook", "microsoft"]);
+		await expect(page.locator("#sort-select")).toHaveCount(0);
 	});
 
 	test("calendar heatmap day links navigate to date", async ({ page }) => {

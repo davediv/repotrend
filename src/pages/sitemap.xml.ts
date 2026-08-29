@@ -1,5 +1,4 @@
 import type { APIRoute } from "astro";
-import { getMondayOfWeek } from "../lib/dates";
 
 export const prerender = false;
 
@@ -25,12 +24,6 @@ export const GET: APIRoute = async ({ locals, site }) => {
 		// Return a minimal sitemap with just the homepage on DB failure
 	}
 
-	// Collect unique week Mondays from all dates
-	const weekMondays = new Set<string>();
-	for (const date of dates) {
-		weekMondays.add(getMondayOfWeek(date));
-	}
-
 	const urls: { loc: string; lastmod?: string; changefreq: string; priority: string }[] = [];
 
 	// Homepage
@@ -47,15 +40,6 @@ export const GET: APIRoute = async ({ locals, site }) => {
 			loc: `${origin}/trending/${date}`,
 			changefreq: "never",
 			priority: "0.8",
-		});
-	}
-
-	// Weekly trending pages
-	for (const monday of [...weekMondays].sort()) {
-		urls.push({
-			loc: `${origin}/trending/week/${monday}`,
-			changefreq: "weekly",
-			priority: "0.6",
 		});
 	}
 

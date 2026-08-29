@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const executablePath = process.env.PLAYWRIGHT_EXECUTABLE_PATH;
+
 export default defineConfig({
 	testDir: "./e2e",
 	fullyParallel: true,
@@ -10,6 +12,7 @@ export default defineConfig({
 	use: {
 		baseURL: "http://localhost:4321",
 		trace: "on-first-retry",
+		launchOptions: executablePath ? { executablePath } : undefined,
 	},
 	projects: [
 		{

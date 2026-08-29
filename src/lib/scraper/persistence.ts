@@ -10,15 +10,16 @@ function toTopicsJson(topics: string[] | undefined): string {
 }
 
 /**
- * Persists an array of parsed trending repos into the D1 `trending_repos` table.
+ * Persists an ordered daily snapshot into the D1 `trending_repos` table.
  *
- * Uses INSERT OR REPLACE keyed on the composite unique constraint
- * (repo_owner, repo_name, trending_date) for deduplication.
+ * The input order is GitHub's ranking order. Repositories are deduplicated by
+ * owner/name, then the previous snapshot for the date is atomically replaced so
+ * stale repositories cannot remain after a same-day refresh.
  *
  * @param db - Cloudflare D1 database binding
  * @param repos - Array of parsed repos from the scraper
  * @param date - Trending date in YYYY-MM-DD format
- * @returns Number of rows inserted or replaced
+ * @returns Number of unique snapshot rows inserted
  */
 export async function persistRepos(
 	db: D1Database,
@@ -30,13 +31,23 @@ export async function persistRepos(
 	}
 
 	const scrapedAt = new Date().toISOString();
+	const seen = new Set<string>();
+	const uniqueRepos = repos.filter((repo) => {
+		const key = `${repo.repo_owner}/${repo.repo_name}`.toLowerCase();
+		if (seen.has(key)) return false;
+		seen.add(key);
+		return true;
+	});
 
-	const statements = repos.map((repo) =>
+	const deletePreviousSnapshot = db
+		.prepare("DELETE FROM trending_repos WHERE trending_date = ?")
+		.bind(date);
+	const insertStatements = uniqueRepos.map((repo, index) =>
 		db
 			.prepare(
-				`INSERT OR REPLACE INTO trending_repos
-          (repo_owner, repo_name, description, language, language_color, total_stars, forks, stars_today, trending_date, scraped_at, topics_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				`INSERT INTO trending_repos
+          (repo_owner, repo_name, description, language, language_color, total_stars, forks, stars_today, trending_date, scraped_at, topics_json, daily_rank)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			)
 			.bind(
 				repo.repo_owner,
@@ -50,17 +61,17 @@ export async function persistRepos(
 				date,
 				scrapedAt,
 				toTopicsJson(repo.topics),
+				index + 1,
 			),
 	);
 
 	try {
-		const results = await db.batch(statements);
+		const results = await db.batch([deletePreviousSnapshot, ...insertStatements]);
 
 		let rowsWritten = 0;
-		for (const result of results) {
-			if (result.success) {
-				rowsWritten += result.meta.changes ?? 0;
-			}
+		for (const result of results.slice(1)) {
+			if (!result.success) throw new Error("D1 snapshot insert failed");
+			rowsWritten += result.meta.changes ?? 0;
 		}
 
 		return rowsWritten;

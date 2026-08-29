@@ -176,6 +176,20 @@ describe("parseTrendingPage", () => {
 	});
 
 	describe("edge cases", () => {
+		it("deduplicates repository names case-insensitively while preserving source order", () => {
+			const html = `
+				<article class="Box-row"><h2><a href="/Owner/Repo">Owner / Repo</a></h2></article>
+				<article class="Box-row"><h2><a href="/owner/repo">owner / repo</a></h2></article>
+				<article class="Box-row"><h2><a href="/Other/Project">Other / Project</a></h2></article>
+			`;
+			const repos = parseTrendingPage(html);
+
+			expect(repos.map(({ repo_owner, repo_name }) => `${repo_owner}/${repo_name}`)).toEqual([
+				"Owner/Repo",
+				"Other/Project",
+			]);
+		});
+
 		it("returns null language when programmingLanguage element has empty text", () => {
 			const html = `
 				<article class="Box-row">

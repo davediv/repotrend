@@ -47,9 +47,7 @@
 	gap: 0.5rem;
 }
 
-.appearances-badge,
-.streak-badge,
-.new-entry-badge {
+.appearances-badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.25rem;
@@ -62,15 +60,7 @@
 	white-space: nowrap;
 }
 
-.appearances-badge + .streak-badge,
-.appearances-badge + .new-entry-badge,
-.streak-badge + .new-entry-badge {
-	margin-inline-start: 0;
-}
-
-.appearances-badge svg,
-.streak-badge svg,
-.new-entry-badge svg {
+.appearances-badge svg {
 	flex-shrink: 0;
 }
 
@@ -78,19 +68,6 @@
 	color: var(--color-accent);
 	background-color: var(--color-bg-secondary);
 	border: 1px solid var(--color-border);
-}
-
-.streak-badge {
-	color: var(--color-streak);
-	background-color: var(--color-streak-bg);
-	border: 1px solid var(--color-streak-border);
-}
-
-.new-entry-badge {
-	font-weight: 600;
-	color: var(--color-new-entry);
-	background-color: var(--color-new-entry-bg);
-	border: 1px solid var(--color-new-entry-border);
 }
 
 .repo-name {
@@ -206,15 +183,6 @@
 .stars-today {
 	color: var(--color-stars-today);
 	font-weight: 500;
-}
-
-.sparkline-container {
-	margin-inline-start: auto;
-}
-
-.sparkline {
-	display: block;
-	overflow: visible;
 }
 
 @media (max-width: 640px) {

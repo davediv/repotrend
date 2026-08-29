@@ -210,9 +210,9 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			expect(result.error).toBeUndefined();
 			expect(result.errorType).toBeUndefined();
 
-			// Verify batch was called once with 3 statements
+			// One delete plus three ranked inserts are committed in one batch.
 			expect(calls.batchCount).toBe(1);
-			expect(calls.prepare).toHaveLength(3);
+			expect(calls.prepare).toHaveLength(4);
 		});
 
 		it("parses fixture HTML and persists 25 repos from full page", async () => {
@@ -222,7 +222,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			expect(result.repoCount).toBe(25);
 			expect(result.rowsWritten).toBe(25);
 			expect(calls.batchCount).toBe(1);
-			expect(calls.prepare).toHaveLength(25);
+			expect(calls.prepare).toHaveLength(26);
 		});
 
 		it("binds correct parsed data to persistence layer", async () => {
@@ -230,7 +230,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 
 			// First repo: facebook/react
 			const [owner, name, desc, lang, color, stars, forks, starsToday, date, scrapedAt] =
-				calls.bind[0];
+				calls.bind[1];
 			expect(owner).toBe("facebook");
 			expect(name).toBe("react");
 			expect(desc).toBe("The library for web and native user interfaces.");
@@ -241,25 +241,30 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			expect(starsToday).toBe(1234);
 			expect(date).toBe(MOCK_TODAY);
 			expect(scrapedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+			expect(calls.bind[1][11]).toBe(1);
 
 			// Second repo: microsoft/typescript
-			expect(calls.bind[1][0]).toBe("microsoft");
-			expect(calls.bind[1][1]).toBe("typescript");
-			expect(calls.bind[1][5]).toBe(102345);
-			expect(calls.bind[1][7]).toBe(567);
+			expect(calls.bind[2][0]).toBe("microsoft");
+			expect(calls.bind[2][1]).toBe("typescript");
+			expect(calls.bind[2][5]).toBe(102345);
+			expect(calls.bind[2][7]).toBe(567);
+			expect(calls.bind[2][11]).toBe(2);
 
 			// Third repo: torvalds/linux
-			expect(calls.bind[2][0]).toBe("torvalds");
-			expect(calls.bind[2][1]).toBe("linux");
-			expect(calls.bind[2][5]).toBe(189012);
-			expect(calls.bind[2][7]).toBe(890);
+			expect(calls.bind[3][0]).toBe("torvalds");
+			expect(calls.bind[3][1]).toBe("linux");
+			expect(calls.bind[3][5]).toBe(189012);
+			expect(calls.bind[3][7]).toBe(890);
+			expect(calls.bind[3][11]).toBe(3);
 		});
 
-		it("uses INSERT OR REPLACE SQL for all statements", async () => {
+		it("atomically replaces the date snapshot with ordered inserts", async () => {
 			const { calls } = await runPipelineWithFixture();
 
-			for (const sql of calls.prepare) {
-				expect(sql).toContain("INSERT OR REPLACE");
+			expect(calls.prepare[0]).toContain("DELETE FROM trending_repos");
+			for (const sql of calls.prepare.slice(1)) {
+				expect(sql).toContain("INSERT INTO trending_repos");
+				expect(sql).toContain("daily_rank");
 			}
 		});
 
@@ -271,7 +276,8 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			const result = await runScrapePipeline(db);
 
 			expect(result.date).toBe(MOCK_TODAY);
-			for (const bindArgs of calls.bind) {
+			expect(calls.bind[0]).toEqual([MOCK_TODAY]);
+			for (const bindArgs of calls.bind.slice(1)) {
 				expect(bindArgs[8]).toBe(MOCK_TODAY);
 			}
 		});
@@ -311,7 +317,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 
 			for (let i = 0; i < expectedRepos.length; i++) {
 				const repo = expectedRepos[i];
-				const bound = calls.bind[i];
+				const bound = calls.bind[i + 1];
 				expect(bound[0]).toBe(repo.repo_owner);
 				expect(bound[1]).toBe(repo.repo_name);
 				expect(bound[2]).toBe(repo.description);
@@ -388,7 +394,7 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			expect(body[2].total_stars).toBe(189012);
 		});
 
-		it("API enriches repos with default streak and is_new_entry when enrichment queries return empty", async () => {
+		it("API returns only the daily snapshot fields", async () => {
 			const { storedRows } = buildStoredRows();
 
 			const { db } = mockDB({ queryResultsByIndex: { 0: storedRows } });
@@ -396,10 +402,11 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 
 			const res = await getTrending(apiContext({ params: { date: MOCK_TODAY }, db, kv }));
 
-			const body = (await res.json()) as Array<{ streak: number; is_new_entry: boolean }>;
+			const body = (await res.json()) as Array<Record<string, unknown>>;
 			for (const repo of body) {
-				expect(repo.streak).toBe(1);
-				expect(repo.is_new_entry).toBe(false);
+				expect(repo).not.toHaveProperty("streak");
+				expect(repo).not.toHaveProperty("is_new_entry");
+				expect(repo).not.toHaveProperty("star_history");
 			}
 		});
 	});
@@ -612,12 +619,15 @@ describe("TEST-P5-004: Full scrape pipeline integration", () => {
 			expect(pipelineResult.repoCount).toBe(3);
 
 			// Step 2: Verify the data bound to D1 matches parsed output
-			expect(pipelineCalls.bind).toHaveLength(3);
+			expect(pipelineCalls.bind).toHaveLength(4);
+			expect(pipelineCalls.bind[0]).toEqual([MOCK_TODAY]);
 			for (let i = 0; i < parsed.length; i++) {
-				expect(pipelineCalls.bind[i][0]).toBe(parsed[i].repo_owner);
-				expect(pipelineCalls.bind[i][1]).toBe(parsed[i].repo_name);
-				expect(pipelineCalls.bind[i][5]).toBe(parsed[i].total_stars);
-				expect(pipelineCalls.bind[i][7]).toBe(parsed[i].stars_today);
+				const bound = pipelineCalls.bind[i + 1];
+				expect(bound[0]).toBe(parsed[i].repo_owner);
+				expect(bound[1]).toBe(parsed[i].repo_name);
+				expect(bound[5]).toBe(parsed[i].total_stars);
+				expect(bound[7]).toBe(parsed[i].stars_today);
+				expect(bound[11]).toBe(i + 1);
 			}
 
 			// Step 3: Simulate D1 returning stored data, verify API response

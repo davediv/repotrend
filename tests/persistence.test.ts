@@ -110,7 +110,7 @@ describe("persistRepos", () => {
 	});
 
 	describe("SQL and parameter binding", () => {
-		it("prepares one statement per repo", async () => {
+		it("prepares one snapshot delete plus one insert per repo", async () => {
 			const repos = [
 				sampleParsedRepo({ repo_owner: "a", repo_name: "b" }),
 				sampleParsedRepo({ repo_owner: "c", repo_name: "d" }),
@@ -118,13 +118,15 @@ describe("persistRepos", () => {
 			];
 			const { db, calls } = mockDB();
 			await persistRepos(db, repos, TEST_DATE);
-			expect(calls.prepare).toHaveLength(3);
+			expect(calls.prepare).toHaveLength(4);
+			expect(calls.prepare[0]).toContain("DELETE FROM trending_repos");
 		});
 
-		it("uses INSERT OR REPLACE SQL for deduplication", async () => {
+		it("replaces the previous date snapshot before inserting", async () => {
 			const { db, calls } = mockDB();
 			await persistRepos(db, [sampleParsedRepo()], TEST_DATE);
-			expect(calls.prepare[0]).toContain("INSERT OR REPLACE");
+			expect(calls.prepare[0]).toContain("DELETE FROM trending_repos");
+			expect(calls.prepare[1]).toContain("INSERT INTO trending_repos");
 		});
 
 		it("binds correct parameters including date and scraped_at", async () => {
@@ -141,9 +143,22 @@ describe("persistRepos", () => {
 			const { db, calls } = mockDB();
 			await persistRepos(db, [repo], TEST_DATE);
 
-			expect(calls.bind).toHaveLength(1);
-			const [owner, name, desc, lang, color, stars, forks, starsToday, date, scrapedAt] =
-				calls.bind[0];
+			expect(calls.bind).toHaveLength(2);
+			expect(calls.bind[0]).toEqual([TEST_DATE]);
+			const [
+				owner,
+				name,
+				desc,
+				lang,
+				color,
+				stars,
+				forks,
+				starsToday,
+				date,
+				scrapedAt,
+				_topics,
+				dailyRank,
+			] = calls.bind[1];
 			expect(owner).toBe("torvalds");
 			expect(name).toBe("linux");
 			expect(desc).toBe("Linux kernel");
@@ -154,6 +169,7 @@ describe("persistRepos", () => {
 			expect(starsToday).toBe(300);
 			expect(date).toBe(TEST_DATE);
 			expect(scrapedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+			expect(dailyRank).toBe(1);
 		});
 
 		it("handles null optional fields (description, language, language_color)", async () => {
@@ -165,10 +181,27 @@ describe("persistRepos", () => {
 			const { db, calls } = mockDB();
 			await persistRepos(db, [repo], TEST_DATE);
 
-			const [, , desc, lang, color] = calls.bind[0];
+			const [, , desc, lang, color] = calls.bind[1];
 			expect(desc).toBeNull();
 			expect(lang).toBeNull();
 			expect(color).toBeNull();
+		});
+
+		it("deduplicates repositories case-insensitively and keeps source order", async () => {
+			const repos = [
+				sampleParsedRepo({ repo_owner: "A", repo_name: "one" }),
+				sampleParsedRepo({ repo_owner: "a", repo_name: "ONE" }),
+				sampleParsedRepo({ repo_owner: "B", repo_name: "two" }),
+			];
+			const { db, calls } = mockDB();
+			const count = await persistRepos(db, repos, TEST_DATE);
+
+			expect(count).toBe(2);
+			expect(calls.prepare).toHaveLength(3);
+			expect(calls.bind[1][0]).toBe("A");
+			expect(calls.bind[1][11]).toBe(1);
+			expect(calls.bind[2][0]).toBe("B");
+			expect(calls.bind[2][11]).toBe(2);
 		});
 	});
 
@@ -180,6 +213,7 @@ describe("persistRepos", () => {
 			];
 			const { db } = mockDB({
 				batchResults: [
+					{ success: true, meta: { changes: 0 } },
 					{ success: true, meta: { changes: 1 } },
 					{ success: true, meta: { changes: 1 } },
 				],
@@ -195,6 +229,7 @@ describe("persistRepos", () => {
 			];
 			const { db } = mockDB({
 				batchResults: [
+					{ success: true, meta: { changes: 2 } },
 					{ success: true, meta: { changes: 1 } },
 					{ success: true, meta: { changes: 0 } },
 				],
@@ -203,24 +238,29 @@ describe("persistRepos", () => {
 			expect(count).toBe(1);
 		});
 
-		it("does not count changes from failed batch results", async () => {
+		it("rejects a failed snapshot insert", async () => {
 			const repos = [
 				sampleParsedRepo({ repo_owner: "a", repo_name: "b" }),
 				sampleParsedRepo({ repo_owner: "c", repo_name: "d" }),
 			];
 			const { db } = mockDB({
 				batchResults: [
-					{ success: true, meta: { changes: 1 } },
+					{ success: true, meta: { changes: 2 } },
 					{ success: false, meta: { changes: 0 } },
+					{ success: true, meta: { changes: 1 } },
 				],
 			});
-			const count = await persistRepos(db, repos, TEST_DATE);
-			expect(count).toBe(1);
+			await expect(persistRepos(db, repos, TEST_DATE)).rejects.toThrow(
+				"D1 persistence failed: D1 snapshot insert failed",
+			);
 		});
 
 		it("treats undefined meta.changes as 0", async () => {
 			const { db } = mockDB({
-				batchResults: [{ success: true, meta: {} }],
+				batchResults: [
+					{ success: true, meta: { changes: 1 } },
+					{ success: true, meta: {} },
+				],
 			});
 			const count = await persistRepos(db, [sampleParsedRepo()], TEST_DATE);
 			expect(count).toBe(0);
@@ -280,10 +320,10 @@ describe("getTrendingRepos", () => {
 		expect(calls.bind[0]).toEqual([TEST_DATE]);
 	});
 
-	it("uses SELECT with ORDER BY stars_today DESC", async () => {
+	it("orders by GitHub's persisted daily rank", async () => {
 		const { db, calls } = mockDB();
 		await getTrendingRepos(db, TEST_DATE);
-		expect(calls.prepare[0]).toContain("ORDER BY stars_today DESC");
+		expect(calls.prepare[0]).toContain("ORDER BY daily_rank ASC, id ASC");
 	});
 });
 

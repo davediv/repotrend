@@ -1,4 +1,4 @@
-const TRENDING_URL = "https://github.com/trending";
+const TRENDING_URL = "https://github.com/trending?since=daily";
 
 const USER_AGENT = "RepoTrend/1.0 (+https://repotrend.dev)";
 

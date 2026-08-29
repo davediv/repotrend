@@ -17,13 +17,25 @@ interface Props {
 	partial?: boolean;
 	/** Offset for rank numbering when paginated (0-based index of first item). */
 	rankOffset?: number;
+	/** Empty-state copy for contexts such as today's not-yet-scraped snapshot. */
+	emptyMessage?: string;
 }
 
-const { viewMode = "daily", repos, weekLabel, weekStart, partial, rankOffset = 0 } = Astro.props;
+const {
+	viewMode = "daily",
+	repos,
+	weekLabel,
+	weekStart,
+	partial,
+	rankOffset = 0,
+	emptyMessage: emptyMessageOverride,
+} = Astro.props;
 const isWeekly = viewMode === "weekly";
-const emptyMessage = isWeekly
-	? "No trending data available for this week."
-	: "No trending data available for this date.";
+const emptyMessage =
+	emptyMessageOverride ??
+	(isWeekly
+		? "No trending data available for this week."
+		: "No trending data available for this date.");
 const weekDatetime = weekStart ? `${weekStart}/${getSundayOfWeek(weekStart)}` : undefined;
 ---
 
@@ -55,9 +67,6 @@ const weekDatetime = weekStart ? `${weekStart}/${getSundayOfWeek(weekStart)}` : 
 					starsToday={isWeekly ? (repo as WeeklyTrendingRepo).total_stars_gained : (repo as TrendingRepo).stars_today}
 					viewMode={viewMode}
 					appearances={isWeekly ? (repo as WeeklyTrendingRepo).appearances : undefined}
-					streak={!isWeekly ? (repo as TrendingRepo).streak : undefined}
-					isNewEntry={!isWeekly ? (repo as TrendingRepo).is_new_entry : undefined}
-					starHistory={!isWeekly ? (repo as TrendingRepo).star_history : undefined}
 				/>
 			</li>
 		))}
