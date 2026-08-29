@@ -24,10 +24,14 @@ test.describe("Date Navigation", () => {
 
 		await page.goto("/trending/2026-02-12");
 		await expect(page.locator('.date-nav-btn[data-action="prev"]')).toBeEnabled();
+		await expect(page.locator('.date-nav-btn[data-action="prev"]')).toHaveAttribute(
+			"href",
+			"/trending/2026-02-11",
+		);
 		expect(dateApiRequests).toBe(0);
 	});
 
-	test("previous button navigates to earlier date", async ({ page }) => {
+	test("previous link navigates to earlier date", async ({ page }) => {
 		await page.goto("/trending/2026-02-15");
 		// The SSR-provided archive dates enable navigation without another request.
 		const prevBtn = page.locator('.date-nav-btn[data-action="prev"]');
@@ -37,7 +41,7 @@ test.describe("Date Navigation", () => {
 		await expect(page.locator(".date-display")).toContainText("February 14, 2026");
 	});
 
-	test("next button navigates to later date", async ({ page }) => {
+	test("next link navigates to later date", async ({ page }) => {
 		await page.goto("/trending/2026-02-09");
 		// The SSR-provided archive dates enable navigation without another request.
 		const nextBtn = page.locator('.date-nav-btn[data-action="next"]');
@@ -86,6 +90,10 @@ test.describe("Date Navigation", () => {
 		expect(response?.status()).toBe(404);
 		await expect(page).toHaveTitle("Page Not Found — RepoTrend");
 		await expect(page.getByRole("heading", { level: 1 })).toHaveText("404 — Page Not Found");
+		await expect(page.getByRole("link", { name: "View latest snapshot" })).toHaveAttribute(
+			"href",
+			"/",
+		);
 		await expect(page.locator(".error-container")).toHaveCount(0);
 	});
 
@@ -106,6 +114,21 @@ test.describe("Date Navigation", () => {
 			"No GitHub Trending snapshot was captured for February 8, 2026",
 		);
 		await expect(page.getByText("Something went wrong")).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "View latest snapshot" })).toHaveAttribute(
+			"href",
+			"/",
+		);
+	});
+
+	test("previous navigation works without JavaScript", async ({ browser, baseURL }) => {
+		const context = await browser.newContext({ javaScriptEnabled: false });
+		const page = await context.newPage();
+		await page.goto(new URL("/trending/2026-02-15", baseURL).href);
+		const previousLink = page.getByRole("link", { name: "Previous available date" });
+		await expect(previousLink).toHaveAttribute("href", "/trending/2026-02-14");
+		await previousLink.click();
+		await expect(page).toHaveURL(/\/trending\/2026-02-14$/);
+		await context.close();
 	});
 
 	test("unknown routes return the custom 404 page", async ({ page }) => {

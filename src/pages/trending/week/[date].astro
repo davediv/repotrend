@@ -26,6 +26,7 @@ import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
 import { paginate, parsePageParam } from "../../../lib/pagination";
 import Pagination from "../../../components/Pagination.astro";
 import ArchiveInsights from "../../../components/ArchiveInsights.astro";
+import { archivePeriodHref, getAdjacentArchivePeriods } from "../../../lib/archive-navigation";
 
 export const prerender = false;
 
@@ -75,6 +76,28 @@ try {
 const page = parsePageParam(Astro.url.searchParams.get("page"));
 const paginationInfo = paginate(allRepos.length, page);
 const repos = allRepos.slice(paginationInfo.startIndex, paginationInfo.endIndex);
+const { periods, previous } = getAdjacentArchivePeriods(
+	dateCounts.map(({ date: availableDate }) => availableDate),
+	monday,
+	"weekly",
+);
+const latestWeek = periods[periods.length - 1];
+const emptyActions: Array<{ href: string; label: string; primary?: boolean }> = [];
+if (!hasError && allRepos.length === 0) {
+	if (previous && previous !== latestWeek) {
+		emptyActions.push({
+			href: archivePeriodHref(previous, "weekly"),
+			label: "Previous available week",
+		});
+	}
+	if (latestWeek) {
+		emptyActions.push({
+			href: archivePeriodHref(latestWeek, "weekly"),
+			label: "View latest weekly rollup",
+			primary: true,
+		});
+	}
+}
 ---
 
 <Layout
@@ -109,6 +132,7 @@ const repos = allRepos.slice(paginationInfo.startIndex, paginationInfo.endIndex)
 				repos={repos}
 				rankOffset={paginationInfo.startIndex}
 				emptyMessage={`No GitHub Trending snapshots were captured for ${weekLabel}. Choose another week to browse the archive.`}
+				emptyActions={emptyActions}
 			/>
 			<Pagination pagination={paginationInfo} />
 		</>

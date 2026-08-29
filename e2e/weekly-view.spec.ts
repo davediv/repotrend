@@ -52,6 +52,7 @@ test.describe("Weekly Archive", () => {
 		const nextBtn = page.locator('.date-nav-btn[data-action="next"]');
 		await expect(prevBtn).toBeVisible();
 		await expect(nextBtn).toBeVisible();
+		await expect(nextBtn).toHaveAttribute("href", /\/trending\/week\/\d{4}-\d{2}-\d{2}/);
 	});
 
 	test("weekly view sort dropdown has weekly-specific options", async ({ page }) => {

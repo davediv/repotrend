@@ -1,36 +1,49 @@
 ---
+import {
+	archivePeriodHref,
+	getAdjacentArchivePeriods,
+	type ArchiveViewMode,
+} from "../lib/archive-navigation";
 import { formatDateDisplay, formatWeekRange, getSundayOfWeek, todayUTC } from "../lib/dates";
 
 interface Props {
 	selectedDate?: string;
-	viewMode?: "daily" | "weekly";
+	viewMode?: ArchiveViewMode;
 	/** Chronological archive dates already loaded by the SSR page. */
 	availableDates?: string[];
 }
 
-const { selectedDate, viewMode = "daily", availableDates } = Astro.props;
-
+const { selectedDate, viewMode = "daily", availableDates = [] } = Astro.props;
 const currentDate = selectedDate || todayUTC();
 const displayText =
 	viewMode === "weekly" ? formatWeekRange(currentDate) : formatDateDisplay(currentDate);
 const datetimeAttr =
 	viewMode === "weekly" ? `${currentDate}/${getSundayOfWeek(currentDate)}` : currentDate;
+const { periods, previous, next } = getAdjacentArchivePeriods(
+	availableDates,
+	currentDate,
+	viewMode,
+);
+
+const preservedParams = new URLSearchParams(Astro.url.searchParams);
+preservedParams.delete("page");
+const query = preservedParams.toString();
+const suffix = query ? `?${query}` : "";
+const hrefFor = (period: string | null): string | undefined =>
+	period ? `${archivePeriodHref(period, viewMode)}${suffix}` : undefined;
+const previousHref = hrefFor(previous);
+const nextHref = hrefFor(next);
+const periodName = viewMode === "weekly" ? "week" : "date";
 ---
 
-<div
-	class="date-picker"
-	role="group"
-	aria-label="Date navigation"
-	data-selected-date={currentDate}
-	data-view-mode={viewMode}
-	data-available-dates={availableDates ? JSON.stringify(availableDates) : undefined}
->
-	<button
-		class="date-nav-btn"
+<div class="date-picker" role="group" aria-label="Date navigation" data-view-mode={viewMode}>
+	<a
+		class:list={["date-nav-btn", { disabled: !previousHref }]}
 		data-action="prev"
-		type="button"
-		aria-label={viewMode === "weekly" ? "Previous week" : "Previous day"}
-		disabled
+		href={previousHref}
+		aria-label={`Previous available ${periodName}`}
+		aria-disabled={previousHref ? undefined : "true"}
+		tabindex={previousHref ? undefined : -1}
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -46,13 +59,13 @@ const datetimeAttr =
 		>
 			<polyline points="15 18 9 12 15 6"></polyline>
 		</svg>
-	</button>
+	</a>
 
 	<div class="date-display-container">
 		<button
 			class="date-display"
 			type="button"
-			aria-label={`Selected date: ${displayText}. Click to open calendar.`}
+			aria-label={`Selected date: ${displayText}. Open calendar picker.`}
 		>
 			<svg
 				class="calendar-icon"
@@ -78,18 +91,21 @@ const datetimeAttr =
 			type="date"
 			class="date-input-hidden"
 			value={currentDate}
+			min={periods[0]}
+			max={periods[periods.length - 1]}
 			step={viewMode === "weekly" ? "7" : undefined}
 			tabindex={-1}
 			aria-hidden="true"
 		/>
 	</div>
 
-	<button
-		class="date-nav-btn"
+	<a
+		class:list={["date-nav-btn", { disabled: !nextHref }]}
 		data-action="next"
-		type="button"
-		aria-label={viewMode === "weekly" ? "Next week" : "Next day"}
-		disabled
+		href={nextHref}
+		aria-label={`Next available ${periodName}`}
+		aria-disabled={nextHref ? undefined : "true"}
+		tabindex={nextHref ? undefined : -1}
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -105,56 +121,26 @@ const datetimeAttr =
 		>
 			<polyline points="9 18 15 12 9 6"></polyline>
 		</svg>
-	</button>
+	</a>
 </div>
 
 <script>
-	import { getMondayOfWeek, toDateString } from "../lib/dates";
+	import { getMondayOfWeek } from "../lib/dates";
 
 	class DatePickerController {
-		private prevBtn: HTMLButtonElement;
-		private nextBtn: HTMLButtonElement;
-		private displayBtn: HTMLButtonElement;
+		private displayButton: HTMLButtonElement;
 		private dateInput: HTMLInputElement;
-		private selectedDate: string;
 		private viewMode: "daily" | "weekly";
-		private availableDates: string[] = [];
 
 		constructor(container: HTMLElement) {
-			this.selectedDate = container.dataset.selectedDate!;
 			this.viewMode = (container.dataset.viewMode as "daily" | "weekly") || "daily";
-
-			this.prevBtn = container.querySelector('[data-action="prev"]')!;
-			this.nextBtn = container.querySelector('[data-action="next"]')!;
-			this.displayBtn = container.querySelector(".date-display")!;
+			this.displayButton = container.querySelector(".date-display")!;
 			this.dateInput = container.querySelector(".date-input-hidden")!;
-
 			this.bindEvents();
-			if (!this.loadEmbeddedDates(container.dataset.availableDates)) {
-				this.fetchDateRange();
-			}
-		}
-
-		private loadEmbeddedDates(serializedDates: string | undefined): boolean {
-			if (!serializedDates) return false;
-
-			try {
-				const dates: unknown = JSON.parse(serializedDates);
-				if (!Array.isArray(dates) || !dates.every((date) => typeof date === "string")) {
-					return false;
-				}
-				this.setAvailableDates(dates);
-				return true;
-			} catch {
-				return false;
-			}
 		}
 
 		private bindEvents(): void {
-			this.prevBtn.addEventListener("click", () => this.navigate(-1));
-			this.nextBtn.addEventListener("click", () => this.navigate(1));
-
-			this.displayBtn.addEventListener("click", () => {
+			this.displayButton.addEventListener("click", () => {
 				try {
 					this.dateInput.showPicker();
 				} catch {
@@ -163,155 +149,24 @@ const datetimeAttr =
 			});
 
 			this.dateInput.addEventListener("change", () => {
-				if (this.dateInput.value) {
-					this.goToDate(this.dateInput.value);
-				}
+				if (this.dateInput.value) this.goToDate(this.dateInput.value);
 			});
-
-			this.displayBtn.addEventListener("keydown", (e: KeyboardEvent) => {
-				if (e.key === "ArrowLeft") {
-					e.preventDefault();
-					this.navigate(-1);
-				} else if (e.key === "ArrowRight") {
-					e.preventDefault();
-					this.navigate(1);
-				}
-			});
-		}
-
-		private async fetchDateRange(): Promise<void> {
-			try {
-				const response = await fetch("/api/dates");
-				if (!response.ok) return;
-
-				const data: { earliest: string | null; latest: string | null; dates: string[] } =
-					await response.json();
-
-				this.setAvailableDates(data.dates);
-			} catch {
-				// On failure, enable buttons as a fallback so navigation isn't stuck
-				this.prevBtn.disabled = false;
-				this.nextBtn.disabled = false;
-			}
-		}
-
-		private setAvailableDates(dates: string[]): void {
-			this.availableDates = dates;
-			const earliest = dates[0];
-			const latest = dates[dates.length - 1];
-			if (earliest) this.dateInput.min = earliest;
-			if (latest) this.dateInput.max = latest;
-			this.updateButtonStates();
-		}
-
-		private navigate(direction: number): void {
-			if (this.availableDates.length === 0) return;
-
-			if (this.viewMode === "weekly") {
-				this.navigateWeek(direction);
-				return;
-			}
-
-			const currentIndex = this.availableDates.indexOf(this.selectedDate);
-
-			let targetIndex: number;
-			if (currentIndex === -1) {
-				// Selected date is outside the available dates (e.g., today has no data).
-				// Find the closest available date in the given direction.
-				if (direction < 0) {
-					targetIndex = this.findClosestBefore(this.selectedDate);
-				} else {
-					targetIndex = this.findClosestAfter(this.selectedDate);
-				}
-			} else {
-				targetIndex = currentIndex + direction;
-			}
-
-			if (targetIndex < 0 || targetIndex >= this.availableDates.length) return;
-			this.goToDate(this.availableDates[targetIndex]);
-		}
-
-		private navigateWeek(direction: number): void {
-			const [y, m, d] = this.selectedDate.split("-").map(Number);
-			const current = new Date(y, m - 1, d);
-			current.setDate(current.getDate() + direction * 7);
-			const target = getMondayOfWeek(toDateString(current));
-
-			const earliest = this.availableDates[0];
-			const latest = this.availableDates[this.availableDates.length - 1];
-
-			// Don't navigate beyond the archive range
-			const [ty, tm, td] = target.split("-").map(Number);
-			const targetSunday = toDateString(new Date(ty, tm - 1, td + 6));
-
-			if (direction < 0 && targetSunday < earliest) return;
-			if (direction > 0 && target > latest) return;
-
-			this.goToDate(target);
-		}
-
-		private findClosestBefore(date: string): number {
-			for (let i = this.availableDates.length - 1; i >= 0; i--) {
-				if (this.availableDates[i] < date) return i;
-			}
-			return -1;
-		}
-
-		private findClosestAfter(date: string): number {
-			for (let i = 0; i < this.availableDates.length; i++) {
-				if (this.availableDates[i] > date) return i;
-			}
-			return this.availableDates.length;
 		}
 
 		private goToDate(date: string): void {
 			const params = new URLSearchParams(window.location.search);
 			params.delete("page");
-			const qs = params.toString();
-			const suffix = qs ? `?${qs}` : "";
-			if (this.viewMode === "weekly") {
-				window.location.href = `/trending/week/${getMondayOfWeek(date)}${suffix}`;
-			} else {
-				window.location.href = `/trending/${date}${suffix}`;
-			}
-		}
-
-		private updateButtonStates(): void {
-			if (this.availableDates.length === 0) return;
-
-			const earliest = this.availableDates[0];
-			const latest = this.availableDates[this.availableDates.length - 1];
-
-			if (this.viewMode === "weekly") {
-				const [y, m, d] = this.selectedDate.split("-").map(Number);
-				const current = new Date(y, m - 1, d);
-
-				const prevMonday = new Date(current);
-				prevMonday.setDate(prevMonday.getDate() - 7);
-				const prevSunday = new Date(prevMonday);
-				prevSunday.setDate(prevSunday.getDate() + 6);
-				this.prevBtn.disabled = toDateString(prevSunday) < earliest;
-
-				const nextMonday = new Date(current);
-				nextMonday.setDate(nextMonday.getDate() + 7);
-				this.nextBtn.disabled = toDateString(nextMonday) > latest;
-			} else {
-				const currentIndex = this.availableDates.indexOf(this.selectedDate);
-
-				// Disable prev if at or before the earliest available date
-				this.prevBtn.disabled =
-					currentIndex === 0 || (currentIndex === -1 && this.selectedDate <= earliest);
-
-				// Disable next if at or after the latest available date
-				this.nextBtn.disabled =
-					currentIndex === this.availableDates.length - 1 ||
-					(currentIndex === -1 && this.selectedDate >= latest);
-			}
+			const query = params.toString();
+			const suffix = query ? `?${query}` : "";
+			window.location.href =
+				this.viewMode === "weekly"
+					? `/trending/week/${getMondayOfWeek(date)}${suffix}`
+					: `/trending/${date}${suffix}`;
 		}
 	}
 
-	document.querySelectorAll<HTMLElement>(".date-picker").forEach((el) => {
-		new DatePickerController(el);
+	document.querySelectorAll<HTMLElement>(".date-picker").forEach((element) => {
+		new DatePickerController(element);
 	});
 </script>
 
@@ -332,20 +187,20 @@ const datetimeAttr =
 		border-radius: 6px;
 		background: var(--color-bg);
 		color: var(--color-text-secondary);
-		cursor: pointer;
+		text-decoration: none;
 		transition:
 			color 0.15s,
 			border-color 0.15s,
 			background-color 0.15s;
 	}
 
-	.date-nav-btn:hover:not(:disabled) {
+	.date-nav-btn[href]:hover {
 		color: var(--color-text);
 		border-color: var(--color-border-hover);
 		background-color: var(--color-bg-secondary);
 	}
 
-	.date-nav-btn:disabled {
+	.date-nav-btn.disabled {
 		opacity: 0.4;
 		cursor: not-allowed;
 	}
@@ -414,10 +269,10 @@ const datetimeAttr =
 		}
 
 		.date-display {
+			justify-content: center;
 			width: 100%;
 			height: 44px;
 			font-size: 0.875rem;
-			justify-content: center;
 		}
 	}
 </style>

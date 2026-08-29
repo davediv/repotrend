@@ -12,6 +12,8 @@ interface Props {
 	rankOffset?: number;
 	/** Empty-state copy for contexts such as today's not-yet-scraped snapshot. */
 	emptyMessage?: string;
+	/** Recovery links shown when no repositories are available. */
+	emptyActions?: Array<{ href: string; label: string; primary?: boolean }>;
 }
 
 const {
@@ -19,6 +21,7 @@ const {
 	repos,
 	rankOffset = 0,
 	emptyMessage: emptyMessageOverride,
+	emptyActions = [],
 } = Astro.props;
 const isWeekly = viewMode === "weekly";
 const emptyMessage =
@@ -50,13 +53,22 @@ const emptyMessage =
 		))}
 	</ol>
 ) : (
-	<div class="card-list-empty" role="status">
+	<div class="card-list-empty">
 		<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 			<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
 			<polyline points="14 2 14 8 20 8"></polyline>
 			<line x1="9" y1="15" x2="15" y2="15"></line>
 		</svg>
-		<p>{emptyMessage}</p>
+		<p role="status">{emptyMessage}</p>
+		{emptyActions.length > 0 && (
+			<div class="empty-actions">
+				{emptyActions.map((action) => (
+					<a href={action.href} class:list={["empty-action", { primary: action.primary }]}>
+						{action.label}
+					</a>
+				))}
+			</div>
+		)}
 	</div>
 )}
 
@@ -84,5 +96,38 @@ const emptyMessage =
 	.card-list-empty p {
 		margin: 0;
 		font-size: 1rem;
+	}
+
+	.empty-actions {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.empty-action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 44px;
+		padding: 0.625rem 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		color: var(--color-text);
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.empty-action:hover {
+		border-color: var(--color-border-hover);
+		background: var(--color-bg-secondary);
+	}
+
+	.empty-action.primary {
+		border-color: var(--color-accent);
+		background: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 </style>

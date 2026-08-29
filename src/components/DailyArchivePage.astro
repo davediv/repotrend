@@ -6,6 +6,7 @@ import RepoCardList from "./RepoCardList.astro";
 import Toolbar from "./Toolbar.astro";
 import Layout from "../layouts/Layout.astro";
 import type { DailyArchiveData } from "../lib/daily-archive";
+import { archivePeriodHref, getAdjacentArchivePeriods } from "../lib/archive-navigation";
 import { formatDateDisplay } from "../lib/dates";
 
 interface Props {
@@ -50,6 +51,25 @@ const pageDescription = isTodaySnapshot
 const emptyMessage = isLatestView
 	? "No GitHub Trending snapshots are available yet."
 	: `No GitHub Trending snapshot was captured for ${snapshotLabel}. Choose another date to browse the archive.`;
+const { periods, previous } = getAdjacentArchivePeriods(
+	dateCounts.map(({ date }) => date),
+	selectedDate,
+	"daily",
+);
+const latestDate = periods[periods.length - 1];
+const emptyActions: Array<{ href: string; label: string; primary?: boolean }> = [];
+
+if (!hasSnapshot && !hasError) {
+	if (previous && previous !== latestDate) {
+		emptyActions.push({
+			href: archivePeriodHref(previous, "daily"),
+			label: "Previous available date",
+		});
+	}
+	if (latestDate) {
+		emptyActions.push({ href: "/", label: "View latest snapshot", primary: true });
+	}
+}
 ---
 
 <Layout title={pageTitle} description={pageDescription}>
@@ -79,7 +99,11 @@ const emptyMessage = isLatestView
 				availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
 			/>
 		</Toolbar>
-		{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} emptyMessage={emptyMessage} />}
+		{hasError ? (
+			<ErrorFallback />
+		) : (
+			<RepoCardList repos={repos} emptyMessage={emptyMessage} emptyActions={emptyActions} />
+		)}
 		<ArchiveInsights
 			languages={languages}
 			dateCounts={dateCounts}

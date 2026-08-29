@@ -17,6 +17,8 @@ interface Props {
 	showRetry?: boolean;
 	/** Semantic heading level. Embedded page errors default to an h2. */
 	headingLevel?: "h1" | "h2";
+	/** Label for the homepage recovery link. */
+	homeLabel?: string;
 }
 
 const {
@@ -25,6 +27,7 @@ const {
 	icon = "warning",
 	showRetry = true,
 	headingLevel = "h2",
+	homeLabel = "Back to homepage",
 } = Astro.props;
 const Heading = headingLevel;
 ---
@@ -49,7 +52,7 @@ const Heading = headingLevel;
 	<p>{message}</p>
 	<div class="error-actions">
 		{showRetry && <button class="error-retry" onclick="location.reload()">Try again</button>}
-		<a href="/" class="error-home">Back to homepage</a>
+		<a href="/" class="error-home">{homeLabel}</a>
 	</div>
 </div>
 
