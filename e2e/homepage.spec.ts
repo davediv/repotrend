@@ -30,10 +30,13 @@ test.describe("Homepage", () => {
 		await expect(page.locator(".date-display")).toBeVisible();
 	});
 
-	test("identifies the page as today's daily GitHub snapshot", async ({ page }) => {
+	test("identifies today's latest available snapshot", async ({ page }) => {
 		await page.goto("/");
 		await expect(page.getByRole("heading", { level: 1, name: "Trending today" })).toBeVisible();
-		await expect(page.locator(".today-heading")).toContainText("Daily GitHub snapshot");
+		const heading = page.locator(".snapshot-heading");
+		await expect(heading).toContainText("Daily GitHub snapshot");
+		await expect(heading).toContainText(/Captured at .*UTC/);
+		await expect(heading.getByRole("status")).toHaveCount(0);
 		await expect(page.locator(".view-toggle")).toHaveCount(0);
 	});
 
@@ -86,7 +89,7 @@ test.describe("Homepage", () => {
 		await expect(chart).toBeVisible();
 	});
 
-	test("keeps the homepage focused on today's list", async ({ page }) => {
+	test("keeps the homepage focused on the latest list", async ({ page }) => {
 		await page.goto("/");
 		const heatmap = page.locator(".calendar-heatmap");
 		await expect(heatmap).toHaveCount(0);

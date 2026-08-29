@@ -6,6 +6,7 @@ import {
 	calculateStreaks,
 	detectNewEntries,
 	fetchStarHistory,
+	findLatestAvailableSnapshot,
 	getDateRepoCounts,
 	getLanguageDistribution,
 	getTrendingRepos,
@@ -752,18 +753,26 @@ describe("getWeeklyLanguageDistribution", () => {
 // ── getDateRepoCounts ─────────────────────────────────────────────────
 
 describe("getDateRepoCounts", () => {
-	it("returns date-count pairs", async () => {
+	it("returns date counts with capture metadata", async () => {
 		const { db } = mockDB({
 			queryResults: [
-				{ date: "2026-02-13", count: 25 },
-				{ date: "2026-02-14", count: 25 },
-				{ date: TEST_DATE, count: 20 },
+				{ date: "2026-02-13", count: 25, scraped_at: "2026-02-13T06:00:00Z" },
+				{ date: "2026-02-14", count: 25, scraped_at: "2026-02-14T06:00:00Z" },
+				{ date: TEST_DATE, count: 20, scraped_at: "2026-02-15T06:00:00Z" },
 			],
 		});
 		const counts = await getDateRepoCounts(db);
 		expect(counts).toHaveLength(3);
-		expect(counts[0]).toEqual({ date: "2026-02-13", count: 25 });
-		expect(counts[2]).toEqual({ date: TEST_DATE, count: 20 });
+		expect(counts[0]).toEqual({
+			date: "2026-02-13",
+			count: 25,
+			scraped_at: "2026-02-13T06:00:00Z",
+		});
+		expect(counts[2]).toEqual({
+			date: TEST_DATE,
+			count: 20,
+			scraped_at: "2026-02-15T06:00:00Z",
+		});
 	});
 
 	it("returns empty array when no data", async () => {
@@ -776,6 +785,28 @@ describe("getDateRepoCounts", () => {
 		const { db, calls } = mockDB();
 		await getDateRepoCounts(db);
 		expect(calls.prepare).toHaveLength(1);
+		expect(calls.prepare[0]).toContain("MAX(scraped_at)");
 		expect(calls.bind).toHaveLength(0);
+	});
+});
+
+describe("findLatestAvailableSnapshot", () => {
+	const snapshots = [
+		{ date: "2026-02-15", count: 25, scraped_at: "2026-02-15T06:00:00Z" },
+		{ date: "2026-02-13", count: 25, scraped_at: "2026-02-13T06:00:00Z" },
+		{ date: "2026-02-14", count: 25, scraped_at: "2026-02-14T06:00:00Z" },
+	];
+
+	it("selects the latest snapshot not later than today", () => {
+		expect(findLatestAvailableSnapshot(snapshots, "2026-02-14")).toEqual(snapshots[2]);
+	});
+
+	it("returns the current date when its snapshot is available", () => {
+		expect(findLatestAvailableSnapshot(snapshots, TEST_DATE)).toEqual(snapshots[0]);
+	});
+
+	it("returns null when no eligible snapshot exists", () => {
+		expect(findLatestAvailableSnapshot(snapshots, "2026-02-12")).toBeNull();
+		expect(findLatestAvailableSnapshot([], TEST_DATE)).toBeNull();
 	});
 });

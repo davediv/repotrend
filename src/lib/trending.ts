@@ -108,6 +108,21 @@ function applyPercentages(
 export interface DateRepoCount {
 	date: string;
 	count: number;
+	scraped_at: string | null;
+}
+
+/** Select the most recent captured snapshot not later than the requested date. */
+export function findLatestAvailableSnapshot(
+	dateCounts: readonly DateRepoCount[],
+	throughDate: string,
+): DateRepoCount | null {
+	let latest: DateRepoCount | null = null;
+	for (const snapshot of dateCounts) {
+		if (snapshot.date <= throughDate && (!latest || snapshot.date > latest.date)) {
+			latest = snapshot;
+		}
+	}
+	return latest;
 }
 
 /**
@@ -118,9 +133,9 @@ export interface DateRepoCount {
 export async function getDateRepoCounts(db: D1Database): Promise<DateRepoCount[]> {
 	const { results } = await db
 		.prepare(
-			`SELECT trending_date AS date, COUNT(*) AS count
-			   FROM trending_repos
-			  GROUP BY trending_date
+			`SELECT trending_date AS date, COUNT(*) AS count, MAX(scraped_at) AS scraped_at
+				   FROM trending_repos
+				  GROUP BY trending_date
 			  ORDER BY trending_date ASC`,
 		)
 		.all<DateRepoCount>();
