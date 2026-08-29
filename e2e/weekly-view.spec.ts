@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Legacy Weekly Archive", () => {
+test.describe("Weekly Archive", () => {
 	test("daily pages do not promote a weekly-frequency view", async ({ page }) => {
 		await page.goto("/trending/2026-02-12");
 		await expect(page.locator(".view-toggle")).toHaveCount(0);

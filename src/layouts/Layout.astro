@@ -15,6 +15,12 @@ const {
 } = Astro.props;
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const pathname = Astro.url.pathname;
+const primaryNavigation = [
+	{ href: "/", label: "Today", active: pathname === "/" },
+	{ href: "/trending", label: "Archive", active: pathname.startsWith("/trending") },
+	{ href: "/compare", label: "Compare", active: pathname === "/compare" },
+];
 ---
 
 <!doctype html>
@@ -59,7 +65,12 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 					<span class="logo-name">RepoTrend</span>
 					<span class="tagline">GitHub Trending Archive</span>
 				</a>
-				<nav aria-label="Site">
+				<nav class="primary-nav" aria-label="Primary">
+					{primaryNavigation.map(({ href, label, active }) => (
+						<a href={href} aria-current={active ? "page" : undefined}>{label}</a>
+					))}
+				</nav>
+				<div class="header-utilities">
 					<form class="search-form" action="/search" method="get" role="search" aria-label="Search trending repos">
 						<label for="header-search" class="search-icon">
 							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -122,7 +133,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 							<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
 						</svg>
 					</button>
-				</nav>
+				</div>
 			</div>
 		</header>
 
@@ -381,7 +392,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 		height: 64px;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		gap: 1rem;
 	}
 
 	.logo {
@@ -403,7 +414,42 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 		color: var(--color-text-secondary);
 	}
 
-	nav {
+	.primary-nav {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		margin-left: 0.5rem;
+		margin-right: auto;
+	}
+
+	.primary-nav a {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 40px;
+		padding: 0.375rem 0.75rem;
+		border-radius: 6px;
+		color: var(--color-text-secondary);
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+		transition:
+			background-color 0.15s,
+			color 0.15s;
+	}
+
+	.primary-nav a:hover {
+		background-color: var(--color-bg-secondary);
+		color: var(--color-text);
+	}
+
+	.primary-nav a[aria-current="page"] {
+		background-color: var(--color-bg-tertiary);
+		color: var(--color-text);
+		font-weight: 600;
+	}
+
+	.header-utilities {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -542,8 +588,11 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 	/* Responsive — Mobile (≤ 640px) */
 	@media (max-width: 640px) {
 		.header-inner {
-			height: 56px;
-			padding: 0 0.75rem;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			height: auto;
+			padding: 0.5rem 0.75rem 0;
+			gap: 0.375rem 0.5rem;
 		}
 
 		.logo-name {
@@ -552,6 +601,25 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 
 		.tagline {
 			display: none;
+		}
+
+		.primary-nav {
+			grid-column: 1 / -1;
+			grid-row: 2;
+			width: 100%;
+			margin: 0;
+			border-top: 1px solid var(--color-border);
+		}
+
+		.primary-nav a {
+			flex: 1;
+			min-height: 44px;
+			border-radius: 0;
+		}
+
+		.header-utilities {
+			grid-column: 2;
+			grid-row: 1;
 		}
 
 		.search-input {
@@ -573,7 +641,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 		}
 
 		.search-input:focus {
-			width: 150px;
+			width: min(150px, 40vw);
 			padding: 0 0.75rem 0 2.125rem;
 			border-color: var(--color-accent);
 			background-color: var(--color-bg);
@@ -602,6 +670,10 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 
 	/* Responsive — Tablet (641px – 1024px) */
 	@media (min-width: 641px) and (max-width: 1024px) {
+		.tagline {
+			display: none;
+		}
+
 		.main-inner {
 			padding: 1.5rem;
 		}
