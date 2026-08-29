@@ -89,6 +89,12 @@ test.describe("Homepage", () => {
 		await expect(chart).toBeVisible();
 	});
 
+	test("puts repository results before secondary insights", async ({ page }) => {
+		await page.goto("/");
+		await expect(page.locator("#results ~ .archive-insights")).toBeVisible();
+		await expect(page.getByRole("heading", { level: 2, name: "Insights" })).toBeVisible();
+	});
+
 	test("uses the same archive composition as dated snapshots", async ({ page }) => {
 		await page.goto("/");
 		await expect(page.locator(".daily-archive-page")).toHaveAttribute("data-context", "latest");

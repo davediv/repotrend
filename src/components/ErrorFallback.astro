@@ -15,6 +15,8 @@ interface Props {
 	icon?: "warning" | "info";
 	/** Whether to show the "Try again" (reload) button. */
 	showRetry?: boolean;
+	/** Semantic heading level. Embedded page errors default to an h2. */
+	headingLevel?: "h1" | "h2";
 }
 
 const {
@@ -22,7 +24,9 @@ const {
 	message = "Failed to load data. Please try again.",
 	icon = "warning",
 	showRetry = true,
+	headingLevel = "h2",
 } = Astro.props;
+const Heading = headingLevel;
 ---
 
 <div class="error-fallback" role="alert">
@@ -41,7 +45,7 @@ const {
 			<line x1="12" y1="16" x2="12.01" y2="16" />
 		</svg>
 	)}
-	<h1>{heading}</h1>
+	<Heading class="error-heading">{heading}</Heading>
 	<p>{message}</p>
 	<div class="error-actions">
 		{showRetry && <button class="error-retry" onclick="location.reload()">Try again</button>}
@@ -60,7 +64,7 @@ const {
 		text-align: center;
 	}
 
-	.error-fallback h1 {
+	.error-heading {
 		margin: 0;
 		font-size: 1.5rem;
 		color: var(--color-text);

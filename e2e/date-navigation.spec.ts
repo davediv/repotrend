@@ -70,11 +70,13 @@ test.describe("Date Navigation", () => {
 		for (const path of ["/", "/trending/2026-02-15"]) {
 			await page.goto(path);
 			await expect(page.locator(".daily-archive-page")).toBeVisible();
+			await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 			await expect(page.locator(".snapshot-heading")).toBeVisible();
 			await expect(page.locator(".date-picker")).toBeVisible();
 			await expect(page.locator(".language-chart")).toBeVisible();
 			await expect(page.locator(".calendar-heatmap")).toBeVisible();
 			await expect(page.locator(".card-list-results")).toBeVisible();
+			await expect(page.locator(".card-list-results ~ .archive-insights")).toBeVisible();
 		}
 	});
 

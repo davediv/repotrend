@@ -10,6 +10,9 @@ test.describe("Weekly Archive", () => {
 		await page.goto("/trending/week/2026-02-09");
 		// Title format: "Trending Feb 9 – <formatted> — RepoTrend"
 		await expect(page).toHaveTitle(/Trending.*Feb 9.*RepoTrend/);
+		await expect(
+			page.getByRole("heading", { level: 1, name: /GitHub Trending.*Feb 9/ }),
+		).toBeVisible();
 	});
 
 	test("weekly view renders toolbar and sort dropdown", async ({ page }) => {

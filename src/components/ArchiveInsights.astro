@@ -1,0 +1,52 @@
+---
+import CalendarHeatmap from "./CalendarHeatmap.astro";
+import LanguageChart from "./LanguageChart.astro";
+import type { DateRepoCount, LanguageDistribution } from "../lib/trending";
+
+interface Props {
+	languages: LanguageDistribution[];
+	dateCounts: DateRepoCount[];
+	selectedDate: string;
+}
+
+const { languages, dateCounts, selectedDate } = Astro.props;
+const hasInsights = languages.length > 0 || dateCounts.length > 0;
+---
+
+{hasInsights && (
+	<section class="archive-insights" aria-labelledby="archive-insights-heading">
+		<div class="archive-insights-heading">
+			<h2 id="archive-insights-heading">Insights</h2>
+			<p>Explore the language mix and activity across the archive.</p>
+		</div>
+		<LanguageChart languages={languages} />
+		<CalendarHeatmap dateCounts={dateCounts} selectedDate={selectedDate} />
+	</section>
+)}
+
+<style>
+	.archive-insights {
+		margin-top: 2rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.archive-insights-heading {
+		margin-bottom: 1rem;
+	}
+
+	.archive-insights-heading h2,
+	.archive-insights-heading p {
+		margin: 0;
+	}
+
+	.archive-insights-heading h2 {
+		font-size: 1.25rem;
+	}
+
+	.archive-insights-heading p {
+		margin-top: 0.25rem;
+		color: var(--color-text-secondary);
+		font-size: 0.875rem;
+	}
+</style>

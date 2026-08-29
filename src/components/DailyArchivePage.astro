@@ -1,8 +1,7 @@
 ---
-import CalendarHeatmap from "./CalendarHeatmap.astro";
+import ArchiveInsights from "./ArchiveInsights.astro";
 import DatePicker from "./DatePicker.astro";
 import ErrorFallback from "./ErrorFallback.astro";
-import LanguageChart from "./LanguageChart.astro";
 import RepoCardList from "./RepoCardList.astro";
 import Toolbar from "./Toolbar.astro";
 import Layout from "../layouts/Layout.astro";
@@ -80,9 +79,12 @@ const emptyMessage = isLatestView
 				availableDates={dateCounts.length > 0 ? dateCounts.map(({ date }) => date) : undefined}
 			/>
 		</Toolbar>
-		<LanguageChart languages={languages} />
-		<CalendarHeatmap dateCounts={dateCounts} selectedDate={selectedDate} />
 		{hasError ? <ErrorFallback /> : <RepoCardList repos={repos} emptyMessage={emptyMessage} />}
+		<ArchiveInsights
+			languages={languages}
+			dateCounts={dateCounts}
+			selectedDate={selectedDate}
+		/>
 	</div>
 </Layout>
 
