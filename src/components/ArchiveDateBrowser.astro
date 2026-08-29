@@ -1,0 +1,210 @@
+---
+import type { DateRepoCount } from "../lib/trending";
+import { formatDateDisplay, formatWeekRange, getMondayOfWeek, parseDate } from "../lib/dates";
+
+interface Props {
+	dateCounts: DateRepoCount[];
+	selectedDate?: string;
+	viewMode?: "daily" | "weekly";
+}
+
+interface ArchiveLink {
+	date: string;
+	href: string;
+	label: string;
+	meta: string;
+	isCurrent: boolean;
+}
+
+const { dateCounts, selectedDate, viewMode = "daily" } = Astro.props;
+const selectedPeriod = selectedDate
+	? viewMode === "weekly"
+		? getMondayOfWeek(selectedDate)
+		: selectedDate
+	: undefined;
+
+let links: ArchiveLink[];
+
+if (viewMode === "weekly") {
+	const weeks = new Map<string, number>();
+	for (const snapshot of dateCounts) {
+		const monday = getMondayOfWeek(snapshot.date);
+		weeks.set(monday, (weeks.get(monday) ?? 0) + 1);
+	}
+
+	links = [...weeks.entries()]
+		.sort(([a], [b]) => b.localeCompare(a))
+		.map(([monday, capturedDays]) => ({
+			date: monday,
+			href: `/trending/week/${monday}`,
+			label: formatWeekRange(monday),
+			meta: `${capturedDays} captured ${capturedDays === 1 ? "day" : "days"}`,
+			isCurrent: monday === selectedPeriod,
+		}));
+} else {
+	links = [...dateCounts].reverse().map(({ date, count }) => ({
+		date,
+		href: `/trending/${date}`,
+		label: formatDateDisplay(date),
+		meta: `${count} ${count === 1 ? "repository" : "repositories"}`,
+		isCurrent: date === selectedPeriod,
+	}));
+}
+
+const groupedLinks = new Map<string, ArchiveLink[]>();
+for (const link of links) {
+	const month = link.date.slice(0, 7);
+	const group = groupedLinks.get(month) ?? [];
+	group.push(link);
+	groupedLinks.set(month, group);
+}
+
+const monthFormatter = new Intl.DateTimeFormat("en-US", {
+	month: "long",
+	year: "numeric",
+});
+const groups = [...groupedLinks.entries()].map(([month, items]) => ({
+	month,
+	label: monthFormatter.format(parseDate(`${month}-01`)),
+	items,
+}));
+const selectedMonth = selectedPeriod?.slice(0, 7);
+const hasSelectedMonth = groups.some(({ month }) => month === selectedMonth);
+const periodLabel = viewMode === "weekly" ? "weeks" : "dates";
+---
+
+{links.length > 0 && (
+	<nav class="archive-date-browser" aria-labelledby="archive-date-browser-heading">
+		<div class="archive-browser-heading">
+			<h3 id="archive-date-browser-heading">Browse available {periodLabel}</h3>
+			<p>Select a captured {viewMode === "weekly" ? "week" : "date"}; unavailable periods are omitted.</p>
+		</div>
+		<div class="archive-months">
+			{groups.map(({ month, label, items }, index) => (
+				<details open={month === selectedMonth || (!hasSelectedMonth && index === 0)}>
+					<summary>
+						<span>{label}</span>
+						<span class="month-count">{items.length} {items.length === 1 ? viewMode === "weekly" ? "week" : "date" : periodLabel}</span>
+					</summary>
+					<ul>
+						{items.map((item) => (
+							<li>
+								<a href={item.href} class:list={{ current: item.isCurrent }} aria-current={item.isCurrent ? "page" : undefined}>
+									<time datetime={item.date}>{item.label}</time>
+									<span>{item.meta}</span>
+								</a>
+							</li>
+						))}
+					</ul>
+				</details>
+			))}
+		</div>
+	</nav>
+)}
+
+<style>
+	.archive-date-browser {
+		margin-bottom: 1.5rem;
+		padding: 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+	}
+
+	.archive-browser-heading h3,
+	.archive-browser-heading p {
+		margin: 0;
+	}
+
+	.archive-browser-heading h3 {
+		font-size: 1rem;
+	}
+
+	.archive-browser-heading p {
+		margin-top: 0.25rem;
+		color: var(--color-text-secondary);
+		font-size: 0.8125rem;
+	}
+
+	.archive-months {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: 0.875rem;
+	}
+
+	details {
+		border-top: 1px solid var(--color-border);
+	}
+
+	summary {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		min-height: 44px;
+		color: var(--color-text);
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	.month-count {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 400;
+	}
+
+	ul {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+		gap: 0.5rem;
+		margin: 0 0 0.75rem;
+		padding: 0;
+		list-style: none;
+	}
+
+	a {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		min-height: 44px;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		color: var(--color-text);
+		font-size: 0.8125rem;
+		text-decoration: none;
+	}
+
+	a:hover {
+		border-color: var(--color-border-hover);
+		background: var(--color-bg-secondary);
+	}
+
+	a.current {
+		border-color: var(--color-accent);
+		box-shadow: inset 3px 0 0 var(--color-accent);
+	}
+
+	a span {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		text-align: right;
+	}
+
+	@media (max-width: 640px) {
+		.archive-date-browser {
+			padding: 0.75rem;
+		}
+
+		a {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 0.125rem;
+		}
+
+		a span {
+			text-align: left;
+		}
+	}
+</style>

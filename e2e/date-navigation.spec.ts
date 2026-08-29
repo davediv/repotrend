@@ -134,10 +134,19 @@ test.describe("Date Navigation", () => {
 
 	test("calendar heatmap day links navigate to date", async ({ page }) => {
 		await page.goto("/trending/2026-02-15");
+		await page.locator(".calendar-heatmap > summary").click();
 		const heatmapLink = page.locator('.calendar-heatmap a[href*="/trending/2026-02-12"]');
 		await expect(heatmapLink.first()).toBeVisible({ timeout: 5000 });
 		await heatmapLink.first().click();
 		await page.waitForURL(/\/trending\/2026-02-12/);
 		await expect(page.locator(".date-display")).toContainText("February 12, 2026");
+	});
+
+	test("offers large, grouped links for every available date", async ({ page }) => {
+		await page.goto("/trending/2026-02-15");
+		const dateLink = page.locator('.archive-date-browser a[href="/trending/2026-02-12"]');
+		await expect(dateLink).toBeVisible();
+		const box = await dateLink.boundingBox();
+		expect(box?.height).toBeGreaterThanOrEqual(44);
 	});
 });

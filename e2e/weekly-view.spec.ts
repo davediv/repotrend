@@ -69,4 +69,17 @@ test.describe("Weekly Archive", () => {
 		const weeklyBtn = page.locator(".view-toggle-btn").last();
 		await expect(weeklyBtn).toHaveAttribute("aria-current", "page");
 	});
+
+	test("archive navigation preserves weekly mode and highlights the whole week", async ({
+		page,
+	}) => {
+		await page.goto("/trending/week/2026-02-09");
+		const currentWeek = page.locator('.archive-date-browser a[href="/trending/week/2026-02-09"]');
+		await expect(currentWeek).toHaveAttribute("aria-current", "page");
+
+		await page.locator(".calendar-heatmap > summary").click();
+		await expect(page.locator(".calendar-heatmap .heatmap-cell.selected")).toHaveCount(7);
+		const weeklyHeatmapLink = page.locator('.calendar-heatmap a[href="/trending/week/2026-02-09"]');
+		await expect(weeklyHeatmapLink).toHaveCount(7);
+	});
 });

@@ -607,6 +607,14 @@ describe("fetchStarHistory", () => {
 // ── getWeeklyTrendingRepos ────────────────────────────────────────────
 
 describe("getWeeklyTrendingRepos", () => {
+	it("counts captured days outside window functions for D1 compatibility", async () => {
+		const { db, calls } = mockDB();
+		await getWeeklyTrendingRepos(db, WEEK_START, WEEK_END);
+
+		expect(calls.prepare[0]).toContain("SELECT COUNT(DISTINCT trending_date)");
+		expect(calls.prepare[0]).not.toMatch(/COUNT\(DISTINCT trending_date\) OVER/);
+	});
+
 	it("returns aggregated weekly data with daysWithData", async () => {
 		const { db } = mockDB({
 			queryResults: [

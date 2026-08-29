@@ -1,5 +1,6 @@
 ---
 import CalendarHeatmap from "./CalendarHeatmap.astro";
+import ArchiveDateBrowser from "./ArchiveDateBrowser.astro";
 import LanguageChart from "./LanguageChart.astro";
 import type { DateRepoCount, LanguageDistribution } from "../lib/trending";
 
@@ -7,9 +8,10 @@ interface Props {
 	languages: LanguageDistribution[];
 	dateCounts: DateRepoCount[];
 	selectedDate: string;
+	viewMode?: "daily" | "weekly";
 }
 
-const { languages, dateCounts, selectedDate } = Astro.props;
+const { languages, dateCounts, selectedDate, viewMode = "daily" } = Astro.props;
 const hasInsights = languages.length > 0 || dateCounts.length > 0;
 ---
 
@@ -17,10 +19,19 @@ const hasInsights = languages.length > 0 || dateCounts.length > 0;
 	<section class="archive-insights" aria-labelledby="archive-insights-heading">
 		<div class="archive-insights-heading">
 			<h2 id="archive-insights-heading">Insights</h2>
-			<p>Explore the language mix and activity across the archive.</p>
+			<p>Browse available periods, then explore language mix and archive activity.</p>
 		</div>
+		<ArchiveDateBrowser
+			dateCounts={dateCounts}
+			selectedDate={selectedDate}
+			viewMode={viewMode}
+		/>
 		<LanguageChart languages={languages} />
-		<CalendarHeatmap dateCounts={dateCounts} selectedDate={selectedDate} />
+		<CalendarHeatmap
+			dateCounts={dateCounts}
+			selectedDate={selectedDate}
+			viewMode={viewMode}
+		/>
 	</section>
 )}
 

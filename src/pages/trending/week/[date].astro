@@ -113,7 +113,12 @@ const repos = allRepos.slice(paginationInfo.startIndex, paginationInfo.endIndex)
 			<Pagination pagination={paginationInfo} />
 		</>
 	)}
-	<ArchiveInsights languages={languages} dateCounts={dateCounts} selectedDate={date} />
+	<ArchiveInsights
+		languages={languages}
+		dateCounts={dateCounts}
+		selectedDate={date}
+		viewMode="weekly"
+	/>
 </Layout>
 
 <style>
