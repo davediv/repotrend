@@ -1,518 +1,425 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import RepoCard from "../components/RepoCard.astro";
+import ComparisonRow from "../components/ComparisonRow.astro";
 import ErrorFallback from "../components/ErrorFallback.astro";
-import { formatDateDisplay, isValidBrowseDate, todayUTC } from "../lib/dates";
+import Layout from "../layouts/Layout.astro";
+import {
+	buildComparisonRows,
+	comparisonCounts,
+	filterComparisonRows,
+	parseComparisonView,
+	resolveComparisonSelection,
+	type ComparisonView,
+} from "../lib/comparison";
+import { formatDateDisplay, isValidBrowseDate } from "../lib/dates";
 import { logError } from "../lib/log";
-import { getTrendingRepos, repoKey, type TrendingRepo } from "../lib/trending";
+import {
+	getDateRepoCounts,
+	getTrendingRepos,
+	type DateRepoCount,
+	type TrendingRepo,
+} from "../lib/trending";
 
 export const prerender = false;
 
-const date1 = Astro.url.searchParams.get("date1")?.trim() ?? "";
-const date2 = Astro.url.searchParams.get("date2")?.trim() ?? "";
-const hasBothDates = date1 !== "" && date2 !== "";
-const validDates =
-	hasBothDates && isValidBrowseDate(date1) && isValidBrowseDate(date2) && date1 !== date2;
-
-let date1Repos: TrendingRepo[] = [];
-let date2Repos: TrendingRepo[] = [];
-let commonKeys = new Set<string>();
+const requestedDate1 = Astro.url.searchParams.get("date1")?.trim() ?? "";
+const requestedDate2 = Astro.url.searchParams.get("date2")?.trim() ?? "";
+const view = parseComparisonView(Astro.url.searchParams.get("view"));
+let dateCounts: DateRepoCount[] = [];
+let firstRepositories: TrendingRepo[] = [];
+let secondRepositories: TrendingRepo[] = [];
 let hasError = false;
 
-if (validDates) {
-	try {
-		const db = Astro.locals.runtime.env.DB;
-		[date1Repos, date2Repos] = await Promise.all([
-			getTrendingRepos(db, date1),
-			getTrendingRepos(db, date2),
-		]);
+try {
+	dateCounts = await getDateRepoCounts(Astro.locals.runtime.env.DB);
+} catch (error) {
+	hasError = true;
+	Astro.response.status = 500;
+	Astro.response.statusText = "Internal Server Error";
+	logError("compare_dates_ssr_error")(error);
+}
 
-		const date1Keys = new Set(date1Repos.map(repoKey));
-		const date2Keys = new Set(date2Repos.map(repoKey));
-		commonKeys = new Set([...date1Keys].filter((k) => date2Keys.has(k)));
+const availableDates = dateCounts.map(({ date }) => date);
+const { date1, date2 } = resolveComparisonSelection(availableDates, requestedDate1, requestedDate2);
+let selectionError: string | null = null;
+
+if (!hasError) {
+	if (availableDates.length < 2) {
+		selectionError = "At least two captured snapshots are needed before dates can be compared.";
+	} else if (!date1 || !date2 || !isValidBrowseDate(date1) || !isValidBrowseDate(date2)) {
+		selectionError = "Choose two valid dates in YYYY-MM-DD format.";
+	} else if (date1 === date2) {
+		selectionError = "Choose two different dates to compare.";
+	} else if (!availableDates.includes(date1) || !availableDates.includes(date2)) {
+		selectionError = "Both dates must have a captured GitHub Trending snapshot.";
+	}
+}
+
+if (!hasError && !selectionError) {
+	try {
+		[firstRepositories, secondRepositories] = await Promise.all([
+			getTrendingRepos(Astro.locals.runtime.env.DB, date1),
+			getTrendingRepos(Astro.locals.runtime.env.DB, date2),
+		]);
 	} catch (error) {
 		hasError = true;
 		Astro.response.status = 500;
 		Astro.response.statusText = "Internal Server Error";
-		logError("compare_ssr_error", { date1, date2 })(error);
+		logError("compare_repositories_ssr_error", { date1, date2 })(error);
 	}
 }
 
-const commonCount = commonKeys.size;
-const onlyDate1Count = date1Repos.length - commonCount;
-const onlyDate2Count = date2Repos.length - commonCount;
+const allRows = buildComparisonRows(firstRepositories, secondRepositories);
+const counts = comparisonCounts(allRows);
+const rows = filterComparisonRows(allRows, view);
+const date1Display = date1 ? formatDateDisplay(date1) : "First date";
+const date2Display = date2 ? formatDateDisplay(date2) : "Second date";
+const earliestDate = availableDates[0];
+const latestDate = availableDates[availableDates.length - 1];
 
-const date1Display = validDates ? formatDateDisplay(date1) : "";
-const date2Display = validDates ? formatDateDisplay(date2) : "";
+function filterHref(nextView: ComparisonView): string {
+	const params = new URLSearchParams({ date1, date2 });
+	if (nextView !== "all") params.set("view", nextView);
+	return `/compare?${params.toString()}#comparison-results`;
+}
 
-const title = validDates
-	? `Compare ${date1Display} vs ${date2Display} — RepoTrend`
-	: "Compare Dates — RepoTrend";
-const description = validDates
-	? `Side-by-side comparison of GitHub trending repos on ${date1Display} and ${date2Display}.`
-	: "Compare GitHub trending repositories across two different dates.";
-
-const today = todayUTC();
-const defaultDate1 = date1 || today;
-const defaultDate2 = date2 || "";
+const filters: Array<{ value: ComparisonView; label: string; count: number }> = [
+	{ value: "all", label: "All", count: counts.all },
+	{ value: "both", label: "In both", count: counts.both },
+	{ value: "added", label: "Added", count: counts.added },
+	{ value: "removed", label: "Removed", count: counts.removed },
+];
 ---
 
-<Layout title={title} description={description}>
+<Layout
+	title={selectionError ? "Compare Dates — RepoTrend" : `Compare ${date1Display} and ${date2Display} — RepoTrend`}
+	description="Compare aligned GitHub Trending repository appearances, ranks, and star changes across two captured dates."
+>
 	<div class="compare-page">
-		<h1 class="compare-heading">Compare Trending Dates</h1>
+		<header class="compare-heading">
+			<p>GitHub Trending archive</p>
+			<h1>Compare snapshots</h1>
+			<span>See what stayed, appeared, disappeared, or moved between two captured dates.</span>
+		</header>
 
-		<div class="compare-picker-row">
+		<form class="compare-form" action="/compare" method="get">
 			<div class="compare-picker">
-				<label for="compare-date1">Date 1</label>
+				<label for="compare-date1">Earlier snapshot</label>
 				<input
 					type="date"
 					id="compare-date1"
-					value={defaultDate1}
-					max={today}
-					aria-label="Select first date to compare"
+					name="date1"
+					value={date1}
+					min={earliestDate}
+					max={latestDate}
+					list="captured-comparison-dates"
+					required
 				/>
 			</div>
-			<span class="compare-vs" aria-hidden="true">vs</span>
+			<span class="compare-arrow" aria-hidden="true">→</span>
 			<div class="compare-picker">
-				<label for="compare-date2">Date 2</label>
+				<label for="compare-date2">Later snapshot</label>
 				<input
 					type="date"
 					id="compare-date2"
-					value={defaultDate2}
-					max={today}
-					aria-label="Select second date to compare"
+					name="date2"
+					value={date2}
+					min={earliestDate}
+					max={latestDate}
+					list="captured-comparison-dates"
+					required
 				/>
 			</div>
-			<button id="compare-btn" type="button" class="compare-submit">Compare</button>
-		</div>
+			<button type="submit">Compare dates</button>
+			<datalist id="captured-comparison-dates">
+				{availableDates.map((date) => <option value={date} />)}
+			</datalist>
+		</form>
 
-		{validDates && !hasError && (
-			<div class="compare-summary" role="status">
-				<span class="summary-stat">
-					<span class="summary-count common-count">{commonCount}</span> in common
-				</span>
-				<span class="summary-stat">
-					<span class="summary-count">{onlyDate1Count}</span> unique to {date1Display}
-				</span>
-				<span class="summary-stat">
-					<span class="summary-count">{onlyDate2Count}</span> unique to {date2Display}
-				</span>
+		{hasError ? (
+			<ErrorFallback message="The comparison could not be loaded. Please try again." />
+		) : selectionError ? (
+			<div class="compare-empty" role="alert">
+				<h2>Comparison unavailable</h2>
+				<p>{selectionError}</p>
+				<a href="/trending">Browse captured dates</a>
 			</div>
-		)}
+		) : (
+			<>
+				<section class="comparison-summary" aria-labelledby="comparison-summary-heading">
+					<div>
+						<h2 id="comparison-summary-heading">{date1Display} → {date2Display}</h2>
+						<p>{counts.all} unique repositories across both snapshots.</p>
+					</div>
+					<dl>
+						<div><dt>In both</dt><dd>{counts.both}</dd></div>
+						<div><dt>Added</dt><dd>{counts.added}</dd></div>
+						<div><dt>Removed</dt><dd>{counts.removed}</dd></div>
+					</dl>
+				</section>
 
-		{hasError && <ErrorFallback />}
+				<nav class="comparison-filters" aria-label="Filter comparison results">
+					{filters.map((filter) => (
+						<a
+							href={filterHref(filter.value)}
+							aria-current={filter.value === view ? "page" : undefined}
+						>
+							{filter.label} <span>{filter.count}</span>
+						</a>
+					))}
+				</nav>
 
-		{validDates && !hasError && (
-			<div class="compare-mobile-toggle" role="tablist" aria-label="Select date column">
-				<button
-					role="tab"
-					aria-selected="true"
-					aria-controls="compare-panel-1"
-					data-column="1"
-					class="toggle-tab active"
-				>
-					{date1Display}
-				</button>
-				<button
-					role="tab"
-					aria-selected="false"
-					aria-controls="compare-panel-2"
-					data-column="2"
-					class="toggle-tab"
-				>
-					{date2Display}
-				</button>
-			</div>
-		)}
-
-		{validDates && !hasError && (
-			<div class="compare-columns">
-				<section id="compare-panel-1" role="tabpanel" class="compare-column" data-column="1" aria-label={`Trending repos for ${date1Display}`}>
-					<h2 class="column-heading">{date1Display}</h2>
-					{date1Repos.length > 0 ? (
-						<ol class="card-list-results" aria-label={`Trending repositories for ${date1Display}`}>
-							{date1Repos.map((repo, i) => (
-								<li class={commonKeys.has(repoKey(repo)) ? "common-repo" : ""}>
-									<RepoCard
-										rank={i + 1}
-										repoOwner={repo.repo_owner}
-										repoName={repo.repo_name}
-										description={repo.description}
-										language={repo.language}
-										languageColor={repo.language_color}
-										topics={repo.topics}
-										totalStars={repo.total_stars}
-										forks={repo.forks}
-										starsToday={repo.stars_today}
+				<section id="comparison-results" class="comparison-results" aria-label={`${view === "all" ? "All" : filters.find(({ value }) => value === view)?.label} comparison results`}>
+					{rows.length > 0 ? (
+						<ol>
+							{rows.map((row, index) => (
+								<li>
+									<ComparisonRow
+										row={row}
+										index={index}
+										firstLabel={date1Display}
+										secondLabel={date2Display}
 									/>
 								</li>
 							))}
 						</ol>
 					) : (
 						<div class="compare-empty" role="status">
-							<p>No trending data for this date.</p>
+							<h2>No {filters.find(({ value }) => value === view)?.label.toLowerCase()} repositories</h2>
+							<p>This comparison has no repositories in the selected category.</p>
+							<a href={filterHref("all")}>Show all comparison results</a>
 						</div>
 					)}
 				</section>
-
-				<section id="compare-panel-2" role="tabpanel" class="compare-column" data-column="2" aria-label={`Trending repos for ${date2Display}`}>
-					<h2 class="column-heading">{date2Display}</h2>
-					{date2Repos.length > 0 ? (
-						<ol class="card-list-results" aria-label={`Trending repositories for ${date2Display}`}>
-							{date2Repos.map((repo, i) => (
-								<li class={commonKeys.has(repoKey(repo)) ? "common-repo" : ""}>
-									<RepoCard
-										rank={i + 1}
-										repoOwner={repo.repo_owner}
-										repoName={repo.repo_name}
-										description={repo.description}
-										language={repo.language}
-										languageColor={repo.language_color}
-										topics={repo.topics}
-										totalStars={repo.total_stars}
-										forks={repo.forks}
-										starsToday={repo.stars_today}
-									/>
-								</li>
-							))}
-						</ol>
-					) : (
-						<div class="compare-empty" role="status">
-							<p>No trending data for this date.</p>
-						</div>
-					)}
-				</section>
-			</div>
-		)}
-
-		{!validDates && !hasError && hasBothDates && (
-			<ErrorFallback
-				icon="info"
-				heading="Invalid selection"
-				message="Please select two different valid dates to compare."
-				showRetry={false}
-			/>
-		)}
-
-		{!hasBothDates && !hasError && (
-			<div class="compare-empty compare-empty--initial" role="status">
-				<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-					<line x1="16" y1="2" x2="16" y2="6"></line>
-					<line x1="8" y1="2" x2="8" y2="6"></line>
-					<line x1="3" y1="10" x2="21" y2="10"></line>
-				</svg>
-				<p>Select two dates above to compare their trending repositories side by side.</p>
-			</div>
+			</>
 		)}
 	</div>
 </Layout>
 
-<script>
-	const date1Input = document.getElementById("compare-date1") as HTMLInputElement;
-	const date2Input = document.getElementById("compare-date2") as HTMLInputElement;
-	const compareBtn = document.getElementById("compare-btn") as HTMLButtonElement;
-
-	function navigateToCompare(): void {
-		const d1 = date1Input.value;
-		const d2 = date2Input.value;
-		if (d1 && d2 && d1 !== d2) {
-			window.location.href = `/compare?date1=${encodeURIComponent(d1)}&date2=${encodeURIComponent(d2)}`;
-		}
-	}
-
-	compareBtn.addEventListener("click", navigateToCompare);
-
-	date1Input.addEventListener("keydown", (e) => {
-		if (e.key === "Enter") navigateToCompare();
-	});
-	date2Input.addEventListener("keydown", (e) => {
-		if (e.key === "Enter") navigateToCompare();
-	});
-
-	// Mobile toggle tabs with keyboard navigation
-	const tabs = document.querySelectorAll<HTMLButtonElement>(".toggle-tab");
-	const columns = document.querySelectorAll<HTMLElement>(".compare-column");
-
-	function activateTab(col: string): void {
-		tabs.forEach((t) => {
-			const isActive = t.dataset.column === col;
-			t.classList.toggle("active", isActive);
-			t.setAttribute("aria-selected", String(isActive));
-		});
-		columns.forEach((c) => {
-			c.classList.toggle("hidden-mobile", c.dataset.column !== col);
-		});
-	}
-
-	tabs.forEach((tab) => {
-		tab.addEventListener("click", () => {
-			if (tab.dataset.column) activateTab(tab.dataset.column);
-		});
-	});
-
-	const tablist = document.querySelector<HTMLElement>(".compare-mobile-toggle");
-	tablist?.addEventListener("keydown", (e) => {
-		if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-			e.preventDefault();
-			const tabsArr = [...tabs];
-			const current = tabsArr.findIndex((t) => t.getAttribute("aria-selected") === "true");
-			const next =
-				e.key === "ArrowRight"
-					? (current + 1) % tabsArr.length
-					: (current - 1 + tabsArr.length) % tabsArr.length;
-			if (tabsArr[next].dataset.column) activateTab(tabsArr[next].dataset.column);
-			tabsArr[next].focus();
-		}
-	});
-</script>
-
 <style>
 	.compare-page {
-		max-width: 100%;
+		max-width: 72rem;
+		margin: 0 auto;
 	}
 
 	.compare-heading {
-		margin: 0 0 1.25rem;
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: var(--color-text);
+		margin-bottom: 1.25rem;
 	}
 
-	/* Date picker row */
-	.compare-picker-row {
+	.compare-heading p,
+	.compare-heading h1,
+	.compare-heading span {
+		margin: 0;
+	}
+
+	.compare-heading p {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.compare-heading h1 {
+		font-size: 1.75rem;
+	}
+
+	.compare-heading span {
+		display: block;
+		margin-top: 0.375rem;
+		color: var(--color-text-secondary);
+	}
+
+	.compare-form {
 		display: flex;
 		align-items: flex-end;
+		flex-wrap: wrap;
 		gap: 0.75rem;
 		margin-bottom: 1.5rem;
-		flex-wrap: wrap;
+		padding: 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+		background: var(--color-bg-secondary);
 	}
 
 	.compare-picker {
-		display: flex;
-		flex-direction: column;
+		display: grid;
 		gap: 0.375rem;
 	}
 
 	.compare-picker label {
-		font-size: 0.75rem;
-		font-weight: 500;
 		color: var(--color-text-secondary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		font-size: 0.75rem;
+		font-weight: 600;
 	}
 
-	.compare-picker input[type="date"] {
-		height: 40px;
-		padding: 0 0.75rem;
+	.compare-picker input {
+		min-height: 44px;
+		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
 		background: var(--color-bg);
 		color: var(--color-text);
-		font-family: inherit;
+		font: inherit;
 		font-size: 0.875rem;
-		transition: border-color 0.15s;
 	}
 
-	.compare-picker input[type="date"]:hover {
-		border-color: var(--color-border-hover);
-	}
-
-	.compare-picker input[type="date"]:focus-visible {
-		border-color: var(--color-accent);
-		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
-	}
-
-	.compare-vs {
-		font-size: 0.875rem;
-		font-weight: 600;
+	.compare-arrow {
+		padding-bottom: 0.75rem;
 		color: var(--color-text-secondary);
-		padding-bottom: 0.5rem;
 	}
 
-	.compare-submit {
-		height: 40px;
-		padding: 0 1.25rem;
+	.compare-form button {
+		min-height: 44px;
+		padding: 0.625rem 1rem;
 		border: 1px solid var(--color-accent);
 		border-radius: 6px;
 		background: var(--color-accent);
 		color: var(--color-accent-text);
-		font-family: inherit;
+		font: inherit;
 		font-size: 0.875rem;
-		font-weight: 500;
+		font-weight: 600;
 		cursor: pointer;
-		transition: opacity 0.15s;
 	}
 
-	.compare-submit:hover {
-		opacity: 0.9;
-	}
-
-	/* Summary stats */
-	.compare-summary {
+	.comparison-summary {
 		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		flex-wrap: wrap;
 		gap: 1rem;
-		margin-bottom: 1.25rem;
-		padding: 0.75rem 1rem;
+		margin-bottom: 1rem;
+		padding: 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: 8px;
+	}
+
+	.comparison-summary h2,
+	.comparison-summary p,
+	.comparison-summary dl,
+	.comparison-summary dt,
+	.comparison-summary dd {
+		margin: 0;
+	}
+
+	.comparison-summary h2 {
+		font-size: 1.125rem;
+	}
+
+	.comparison-summary p,
+	.comparison-summary dt {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+	}
+
+	.comparison-summary dl {
+		display: flex;
+		gap: 1.5rem;
+	}
+
+	.comparison-summary dl div {
+		display: grid;
+		justify-items: center;
+	}
+
+	.comparison-summary dd {
+		font-size: 1.125rem;
+		font-weight: 700;
+	}
+
+	.comparison-filters {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.comparison-filters a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		min-height: 40px;
+		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--color-border);
 		border-radius: 6px;
-		background: var(--color-bg-secondary);
-		font-size: 0.875rem;
-		color: var(--color-text-secondary);
-	}
-
-	.summary-count {
-		font-weight: 600;
 		color: var(--color-text);
+		font-size: 0.8125rem;
+		text-decoration: none;
 	}
 
-	.common-count {
-		color: var(--color-common);
+	.comparison-filters a[aria-current="page"] {
+		border-color: var(--color-accent);
+		background: var(--color-accent);
+		color: var(--color-accent-text);
 	}
 
-	/* Mobile toggle */
-	.compare-mobile-toggle {
-		display: none;
+	.comparison-filters span {
+		font-variant-numeric: tabular-nums;
 	}
 
-	/* Two-column layout */
-	.compare-columns {
+	.comparison-results ol {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1.5rem;
-		align-items: start;
+		gap: 0.75rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 
-	.compare-column {
-		min-width: 0;
-	}
-
-	.column-heading {
-		margin: 0 0 0.75rem;
-		font-size: 1.125rem;
-		font-weight: 600;
-		color: var(--color-text);
-	}
-
-	/* Common repo highlight */
-	.compare-columns :global(.common-repo .repo-card) {
-		border-color: var(--color-common-border);
-		background: var(--color-common-bg);
-	}
-
-	.compare-columns :global(.common-repo .repo-card:hover) {
-		border-color: var(--color-common);
-	}
-
-	/* Empty state */
 	.compare-empty {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		gap: 1rem;
+		flex-direction: column;
+		gap: 0.5rem;
 		padding: 3rem 1rem;
 		color: var(--color-text-secondary);
 		text-align: center;
 	}
 
+	.compare-empty h2,
 	.compare-empty p {
 		margin: 0;
-		font-size: 1rem;
 	}
 
-	/* Card list inside compare columns */
-	.compare-columns :global(.card-list-results) {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		list-style: none;
-		margin: 0;
-		padding: 0;
+	.compare-empty h2 {
+		color: var(--color-text);
+		font-size: 1.125rem;
 	}
 
-	/* Responsive — Mobile (≤ 768px) */
-	@media (max-width: 768px) {
-		.compare-heading {
-			font-size: 1.25rem;
-		}
+	.compare-empty a {
+		min-height: 44px;
+		padding: 0.625rem;
+		color: var(--color-link);
+	}
 
-		.compare-picker-row {
-			flex-direction: column;
+	@media (max-width: 640px) {
+		.compare-form {
 			align-items: stretch;
-			gap: 0.5rem;
-		}
-
-		.compare-picker {
-			width: 100%;
-		}
-
-		.compare-picker input[type="date"] {
-			width: 100%;
-			min-height: 44px;
-		}
-
-		.compare-vs {
-			text-align: center;
-			padding-bottom: 0;
-		}
-
-		.compare-submit {
-			width: 100%;
-			min-height: 44px;
-		}
-
-		.compare-mobile-toggle {
-			display: flex;
-			gap: 0;
-			margin-bottom: 1rem;
-			border: 1px solid var(--color-border);
-			border-radius: 6px;
-			overflow: hidden;
-		}
-
-		.toggle-tab {
-			flex: 1;
-			padding: 0.625rem 0.5rem;
-			border: none;
-			background: var(--color-bg);
-			color: var(--color-text-secondary);
-			font-family: inherit;
-			font-size: 0.8125rem;
-			font-weight: 500;
-			cursor: pointer;
-			transition:
-				background-color 0.15s,
-				color 0.15s;
-			min-height: 44px;
-		}
-
-		.toggle-tab + .toggle-tab {
-			border-left: 1px solid var(--color-border);
-		}
-
-		.toggle-tab.active {
-			background: var(--color-accent);
-			color: var(--color-accent-text);
-		}
-
-		.compare-columns {
-			grid-template-columns: 1fr;
-			gap: 0;
-		}
-
-		.compare-column.hidden-mobile {
-			display: none;
-		}
-
-		.column-heading {
-			display: none;
-		}
-
-		.compare-summary {
 			flex-direction: column;
-			gap: 0.5rem;
-			font-size: 0.8125rem;
+		}
+
+		.compare-picker,
+		.compare-picker input,
+		.compare-form button {
+			width: 100%;
+		}
+
+		.compare-arrow {
+			padding: 0;
+			text-align: center;
+			transform: rotate(90deg);
+		}
+
+		.comparison-summary {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.comparison-summary dl {
+			width: 100%;
+			justify-content: space-between;
+		}
+
+		.comparison-filters a {
+			min-height: 44px;
 		}
 	}
 </style>

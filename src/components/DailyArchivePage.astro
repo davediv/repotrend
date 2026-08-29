@@ -84,6 +84,7 @@ if (!hasSnapshot && !hasError) {
 						{capturedTimeLabel && snapshot?.scraped_at && (
 							<time datetime={snapshot.scraped_at}>Captured at {capturedTimeLabel}</time>
 						)}
+						<a href={`/compare?date2=${selectedDate}`}>Compare this date</a>
 					</div>
 				)}
 				{isLatestView && hasSnapshot && !isTodaySnapshot && (
@@ -137,6 +138,11 @@ if (!hasSnapshot && !hasError) {
 		gap: 0.25rem 0.75rem;
 		color: var(--color-text-secondary);
 		font-size: 0.875rem;
+	}
+
+	.snapshot-meta a {
+		color: var(--color-link);
+		font-weight: 500;
 	}
 
 	.snapshot-notice {

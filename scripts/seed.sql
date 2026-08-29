@@ -199,7 +199,7 @@ INSERT INTO trending_repos (repo_owner, repo_name, description, language, langua
 ('prisma', 'prisma', 'Next-generation ORM for Node.js and TypeScript', 'TypeScript', '#3178C6', 38262, 1406, 36, '2026-02-15', '2026-02-15T06:00:00Z'),
 ('TanStack', 'router', 'Type-safe routing for TypeScript', 'TypeScript', '#3178C6', 21204, 906, 27, '2026-02-15', '2026-02-15T06:00:00Z'),
 ('pnpm', 'pnpm', 'Fast, disk space efficient package manager', 'TypeScript', '#3178C6', 28234, 906, 32, '2026-02-15', '2026-02-15T06:00:00Z'),
-('biomejs', 'biome', 'Toolchain for the web', 'Rust', '#DEA584', 15402, 456, 56, '2026-02-15', '2026-02-15T06:00:00Z');
+('openai', 'codex', 'A lightweight coding agent', 'Rust', '#DEA584', 15402, 456, 56, '2026-02-15', '2026-02-15T06:00:00Z');
 
 -- Representative topics used by search/filter acceptance tests.
 UPDATE trending_repos

@@ -122,12 +122,12 @@ test.describe("Search", () => {
 
 	test("supports language and date-range filters with server pagination", async ({ page }) => {
 		await page.goto("/search?language=Rust");
-		await expect(page.locator(".search-result-card")).toHaveCount(3);
-		await expect(page.locator(".language-filter")).toHaveText(["Rust", "Rust", "Rust"]);
+		await expect(page.locator(".search-result-card")).toHaveCount(4);
+		await expect(page.locator(".language-filter")).toHaveText(["Rust", "Rust", "Rust", "Rust"]);
 
 		await page.goto("/search?from=2026-02-09&to=2026-02-15");
 		await expect(page.locator(".search-result-card")).toHaveCount(20);
-		await expect(page.locator(".results-count")).toContainText("of 25 matching repositories");
+		await expect(page.locator(".results-count")).toContainText("of 26 matching repositories");
 		await expect(page.locator(".pagination-next")).toHaveAttribute("href", /page=2/);
 	});
 

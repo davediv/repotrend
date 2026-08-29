@@ -1,0 +1,229 @@
+---
+import { formatNumber } from "../lib/format";
+import type { ComparisonRow } from "../lib/comparison";
+
+interface Props {
+	row: ComparisonRow;
+	index: number;
+	firstLabel: string;
+	secondLabel: string;
+}
+
+const { row, index, firstLabel, secondLabel } = Astro.props;
+const { repository } = row;
+const repoUrl = `https://github.com/${repository.repo_owner}/${repository.repo_name}`;
+const headingId = `comparison-${index}-${row.key}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+const statusLabel =
+	row.status === "both" ? "In both" : row.status === "added" ? "Added" : "Removed";
+const rankChangeLabel =
+	row.rankChange === null
+		? "Not applicable"
+		: row.rankChange > 0
+			? `Moved up ${row.rankChange} ${row.rankChange === 1 ? "place" : "places"}`
+			: row.rankChange < 0
+				? `Moved down ${Math.abs(row.rankChange)} ${row.rankChange === -1 ? "place" : "places"}`
+				: "Rank unchanged";
+const starDeltaLabel =
+	row.starDelta === null
+		? "Not applicable"
+		: row.starDelta > 0
+			? `+${formatNumber(row.starDelta)} total stars`
+			: row.starDelta < 0
+				? `${formatNumber(row.starDelta)} total stars`
+				: "No total-star change";
+---
+
+<article class="comparison-row" data-status={row.status} aria-labelledby={headingId}>
+	<div class="repository-summary">
+		<div class="repository-title-row">
+			<h2 id={headingId}>
+				<a href={repoUrl} target="_blank" rel="noopener noreferrer">
+					<span class="repo-owner">{repository.repo_owner}</span><span class="repo-separator">/</span><span class="repo-name-text">{repository.repo_name}</span>
+					<span class="sr-only">(opens in new tab)</span>
+				</a>
+			</h2>
+			<span class:list={["comparison-status", `status-${row.status}`]}>{statusLabel}</span>
+		</div>
+		{repository.description && <p>{repository.description}</p>}
+		{repository.language && <span class="repository-language">{repository.language}</span>}
+	</div>
+
+	<div class="snapshot-metrics">
+		<div class="snapshot-metric">
+			<span class="period-label">{firstLabel}</span>
+			{row.first ? (
+				<>
+					<strong>Rank #{row.first.rank}</strong>
+					<span>+{formatNumber(row.first.repository.stars_today)} stars that day</span>
+				</>
+			) : (
+				<strong class="not-trending">Not trending</strong>
+			)}
+		</div>
+		<div class="snapshot-metric">
+			<span class="period-label">{secondLabel}</span>
+			{row.second ? (
+				<>
+					<strong>Rank #{row.second.rank}</strong>
+					<span>+{formatNumber(row.second.repository.stars_today)} stars that day</span>
+				</>
+			) : (
+				<strong class="not-trending">Not trending</strong>
+			)}
+		</div>
+	</div>
+
+	<div class="comparison-deltas" aria-label="Changes between snapshots">
+		{row.status === "both" ? (
+			<>
+				<span>{rankChangeLabel}</span>
+				<span>{starDeltaLabel}</span>
+			</>
+		) : row.status === "added" ? (
+			<span>Appeared by {secondLabel}</span>
+		) : (
+			<span>No longer present by {secondLabel}</span>
+		)}
+	</div>
+</article>
+
+<style>
+	.comparison-row {
+		display: grid;
+		grid-template-columns: minmax(14rem, 1.4fr) minmax(18rem, 1fr) minmax(10rem, 0.7fr);
+		gap: 1rem;
+		padding: 1rem;
+		border: 1px solid var(--color-border);
+		border-left-width: 4px;
+		border-radius: 8px;
+		background: var(--color-bg);
+	}
+
+	.comparison-row[data-status="both"] {
+		border-left-color: var(--color-common);
+	}
+
+	.comparison-row[data-status="added"] {
+		border-left-color: var(--color-heatmap-l3);
+	}
+
+	.comparison-row[data-status="removed"] {
+		border-left-color: var(--color-stars-today);
+	}
+
+	.repository-title-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.repository-summary h2,
+	.repository-summary p {
+		margin: 0;
+	}
+
+	.repository-summary h2 {
+		font-size: 1rem;
+	}
+
+	.repository-summary h2 a {
+		color: var(--color-link);
+		text-decoration: none;
+	}
+
+	.repository-summary p {
+		display: -webkit-box;
+		margin-top: 0.375rem;
+		overflow: hidden;
+		color: var(--color-text-secondary);
+		font-size: 0.8125rem;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+	}
+
+	.repository-language {
+		display: inline-block;
+		margin-top: 0.5rem;
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+	}
+
+	.comparison-status {
+		display: inline-flex;
+		align-items: center;
+		min-height: 24px;
+		padding: 0.125rem 0.5rem;
+		border: 1px solid var(--color-border);
+		border-radius: 1rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+	}
+
+	.status-both {
+		color: var(--color-common);
+	}
+
+	.status-added {
+		color: var(--color-heatmap-l4);
+	}
+
+	.status-removed {
+		color: var(--color-stars-today);
+	}
+
+	.snapshot-metrics {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+	}
+
+	.snapshot-metric {
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		font-size: 0.75rem;
+	}
+
+	.snapshot-metric strong {
+		font-size: 0.875rem;
+	}
+
+	.snapshot-metric > span:last-child,
+	.period-label,
+	.not-trending {
+		color: var(--color-text-secondary);
+	}
+
+	.period-label {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		text-transform: uppercase;
+	}
+
+	.comparison-deltas {
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		flex-direction: column;
+		gap: 0.25rem;
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+	}
+
+	.comparison-deltas span:first-child {
+		color: var(--color-text);
+		font-weight: 600;
+	}
+
+	@media (max-width: 800px) {
+		.comparison-row {
+			grid-template-columns: 1fr;
+		}
+
+		.comparison-deltas {
+			padding-top: 0.75rem;
+			border-top: 1px solid var(--color-border);
+		}
+	}
+</style>
