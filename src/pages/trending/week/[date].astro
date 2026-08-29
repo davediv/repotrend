@@ -6,21 +6,13 @@ import ViewToggle from "../../../components/ViewToggle.astro";
 import SortDropdown from "../../../components/SortDropdown.astro";
 import RepoCardList from "../../../components/RepoCardList.astro";
 import ErrorFallback from "../../../components/ErrorFallback.astro";
-import {
-	formatWeekRange,
-	getMondayOfWeek,
-	getSundayOfWeek,
-	isValidBrowseDate,
-	todayUTC,
-} from "../../../lib/dates";
+import { ArchiveValidationError, createArchiveService } from "../../../lib/archive-service";
+import { formatWeekRange, getMondayOfWeek } from "../../../lib/dates";
 import { logError } from "../../../lib/log";
-import {
-	getDateRepoCounts,
-	getWeeklyLanguageDistribution,
-	getWeeklyTrendingRepos,
-	type DateRepoCount,
-	type LanguageDistribution,
-	type WeeklyTrendingRepo,
+import type {
+	DateRepoCount,
+	LanguageDistribution,
+	WeeklyTrendingRepo,
 } from "../../../lib/trending";
 import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
 import { paginate, parsePageParam } from "../../../lib/pagination";
@@ -30,9 +22,14 @@ import { archivePeriodHref, getAdjacentArchivePeriods } from "../../../lib/archi
 
 export const prerender = false;
 
-const { date } = Astro.params;
+const requestedDate = Astro.params.date;
+const archive = createArchiveService(Astro.locals.runtime.env);
+let date: string;
 
-if (!date || !isValidBrowseDate(date)) {
+try {
+	date = archive.validateDate(requestedDate);
+} catch (error) {
+	if (!(error instanceof ArchiveValidationError)) throw error;
 	return Astro.rewrite("/404");
 }
 
@@ -44,7 +41,6 @@ if (date !== monday) {
 }
 
 const weekLabel = formatWeekRange(date);
-const weekEnd = getSundayOfWeek(monday);
 const sort = parseSortParam(Astro.url.searchParams.get("sort"));
 
 let allRepos: WeeklyTrendingRepo[] = [];
@@ -53,18 +49,11 @@ let dateCounts: DateRepoCount[] = [];
 let partial = false;
 let hasError = false;
 try {
-	const db = Astro.locals.runtime.env.DB;
-	const [result, languageResult, dateCountResult] = await Promise.all([
-		getWeeklyTrendingRepos(db, monday, weekEnd),
-		getWeeklyLanguageDistribution(db, monday, weekEnd).catch(() => []),
-		getDateRepoCounts(db).catch(() => []),
-	]);
-	allRepos = sortWeeklyRepos(result.repos, sort);
-	const today = todayUTC();
-	const weekNotFinished = weekEnd > today;
-	partial = weekNotFinished || result.daysWithData < 7;
-	languages = languageResult;
-	dateCounts = dateCountResult;
+	const data = await archive.getWeeklyArchive(monday);
+	allRepos = sortWeeklyRepos(data.repos, sort);
+	partial = data.partial;
+	languages = data.languages;
+	dateCounts = data.dateCounts;
 } catch (error) {
 	hasError = true;
 	Astro.response.status = 500;

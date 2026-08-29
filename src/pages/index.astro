@@ -1,6 +1,7 @@
 ---
 import DailyArchivePage from "../components/DailyArchivePage.astro";
-import { loadDailyArchive, type DailyArchiveData } from "../lib/daily-archive";
+import { createArchiveService } from "../lib/archive-service";
+import type { DailyArchiveData } from "../lib/daily-archive";
 import { todayUTC } from "../lib/dates";
 import { logError } from "../lib/log";
 
@@ -17,7 +18,7 @@ let data: DailyArchiveData = {
 let hasError = false;
 
 try {
-	data = await loadDailyArchive(Astro.locals.runtime.env.DB, {
+	data = await createArchiveService(Astro.locals.runtime.env).getDailyArchive({
 		mode: "latest",
 		throughDate: today,
 	});

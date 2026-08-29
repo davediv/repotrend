@@ -360,9 +360,9 @@ describe("GET /api/dates", () => {
 	it("returns dates with correct response shape", async () => {
 		const { db, calls } = mockDB({
 			queryResults: [
-				{ trending_date: "2026-02-01" },
-				{ trending_date: "2026-02-02" },
-				{ trending_date: "2026-02-05" },
+				{ date: "2026-02-01", count: 25, scraped_at: "2026-02-01T06:00:00Z" },
+				{ date: "2026-02-02", count: 25, scraped_at: "2026-02-02T06:00:00Z" },
+				{ date: "2026-02-05", count: 25, scraped_at: "2026-02-05T06:00:00Z" },
 			],
 		});
 		const res = await getDates(apiContext({ db }));
@@ -712,8 +712,12 @@ describe("GET /api/compare", () => {
 
 			const { db } = mockDB({
 				queryResultsByIndex: {
-					0: [repoA, repoB], // date1 repos
-					1: [repoA, repoC], // date2 repos
+					0: [
+						{ date: "2026-02-04", count: 2, scraped_at: "2026-02-04T06:00:00Z" },
+						{ date: "2026-02-05", count: 2, scraped_at: "2026-02-05T06:00:00Z" },
+					],
+					1: [repoA, repoB], // date1 repos
+					2: [repoA, repoC], // date2 repos
 				},
 			});
 			const url = new URL("http://localhost/api/compare?date1=2026-02-04&date2=2026-02-05");
@@ -738,20 +742,63 @@ describe("GET /api/compare", () => {
 		});
 
 		it("uses immutable Cache-Control when both dates are historical", async () => {
-			const { db } = mockDB({ queryResultsByIndex: { 0: [], 1: [] } });
+			const { db } = mockDB({
+				queryResultsByIndex: {
+					0: [
+						{ date: "2026-02-04", count: 1, scraped_at: null },
+						{ date: "2026-02-05", count: 1, scraped_at: null },
+					],
+					1: [],
+					2: [],
+				},
+			});
 			const url = new URL("http://localhost/api/compare?date1=2026-02-04&date2=2026-02-05");
 			const res = await getCompare(apiContext({ db, url }));
 			expect(res.headers.get("Cache-Control")).toContain("immutable");
 		});
 
 		it("uses short-lived Cache-Control when one date is today", async () => {
-			const { db } = mockDB({ queryResultsByIndex: { 0: [], 1: [] } });
-			const url = new URL(`http://localhost/api/compare?date1=${MOCK_TODAY}&date2=2026-02-05`);
+			const { db } = mockDB({
+				queryResultsByIndex: {
+					0: [
+						{ date: "2026-02-05", count: 1, scraped_at: null },
+						{ date: MOCK_TODAY, count: 1, scraped_at: null },
+					],
+					1: [],
+					2: [],
+				},
+			});
+			const url = new URL(`http://localhost/api/compare?date1=2026-02-05&date2=${MOCK_TODAY}`);
 			const res = await getCompare(apiContext({ db, url }));
 
 			const cc = res.headers.get("Cache-Control") ?? "";
 			expect(cc).toContain("max-age=300");
 			expect(cc).not.toContain("immutable");
+		});
+
+		it("uses the shared validation contract for date order and captured snapshots", async () => {
+			const reverse = await getCompare(
+				validationContext({
+					url: new URL("http://localhost/api/compare?date1=2026-02-05&date2=2026-02-04"),
+				}),
+			);
+			expect(reverse.status).toBe(400);
+			expect(((await reverse.json()) as { code: string }).code).toBe("comparison_order");
+
+			const { db } = mockDB({
+				queryResults: [
+					{ date: "2026-02-03", count: 1, scraped_at: null },
+					{ date: "2026-02-04", count: 1, scraped_at: null },
+				],
+			});
+			const uncaptured = await getCompare(
+				apiContext({
+					db,
+					url: new URL("http://localhost/api/compare?date1=2026-02-04&date2=2026-02-05"),
+				}),
+			);
+			expect(uncaptured.status).toBe(404);
+			expect(((await uncaptured.json()) as { code: string }).code).toBe("snapshot_not_found");
 		});
 	});
 

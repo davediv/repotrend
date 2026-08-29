@@ -1,14 +1,20 @@
 ---
 import DailyArchivePage from "../../components/DailyArchivePage.astro";
-import { loadDailyArchive, type DailyArchiveData } from "../../lib/daily-archive";
-import { isValidBrowseDate, todayUTC } from "../../lib/dates";
+import { ArchiveValidationError, createArchiveService } from "../../lib/archive-service";
+import type { DailyArchiveData } from "../../lib/daily-archive";
+import { todayUTC } from "../../lib/dates";
 import { logError } from "../../lib/log";
 
 export const prerender = false;
 
-const { date } = Astro.params;
+const requestedDate = Astro.params.date;
+const archive = createArchiveService(Astro.locals.runtime.env);
+let date: string;
 
-if (!date || !isValidBrowseDate(date)) {
+try {
+	date = archive.validateDate(requestedDate);
+} catch (error) {
+	if (!(error instanceof ArchiveValidationError)) throw error;
 	return Astro.rewrite("/404");
 }
 
@@ -27,7 +33,7 @@ let data: DailyArchiveData = {
 let hasError = false;
 
 try {
-	data = await loadDailyArchive(Astro.locals.runtime.env.DB, { mode: "exact", date });
+	data = await archive.getDailyArchive({ mode: "exact", date });
 } catch (error) {
 	hasError = true;
 	Astro.response.status = 500;

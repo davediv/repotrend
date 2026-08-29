@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { createArchiveService } from "../lib/archive-service";
 
 export const prerender = false;
 
@@ -8,18 +9,10 @@ function escapeXml(s: string): string {
 
 export const GET: APIRoute = async ({ locals, site }) => {
 	const origin = site?.origin ?? "https://repotrend.dev";
-	const db = locals.runtime.env.DB;
 
 	let dates: string[] = [];
 	try {
-		const { results } = await db
-			.prepare(
-				`SELECT DISTINCT trending_date
-				 FROM trending_repos
-				 ORDER BY trending_date ASC`,
-			)
-			.all<{ trending_date: string }>();
-		dates = results.map((r) => r.trending_date);
+		dates = (await createArchiveService(locals.runtime.env).getArchiveIndex()).dates;
 	} catch {
 		// Return a minimal sitemap with just the homepage on DB failure
 	}

@@ -1,8 +1,5 @@
 import {
 	findLatestAvailableSnapshot,
-	getDateRepoCounts,
-	getLanguageDistribution,
-	getTrendingRepos,
 	type DateRepoCount,
 	type LanguageDistribution,
 	type TrendingRepo,
@@ -37,24 +34,4 @@ export function resolveDailyArchiveSelection(
 		selectedDate: selection.date,
 		snapshot: dateCounts.find(({ date }) => date === selection.date) ?? null,
 	};
-}
-
-/** Load the shared data model used by both `/` and `/trending/:date`. */
-export async function loadDailyArchive(
-	db: D1Database,
-	selection: DailyArchiveSelection,
-): Promise<DailyArchiveData> {
-	const dateCounts = await getDateRepoCounts(db);
-	const resolved = resolveDailyArchiveSelection(dateCounts, selection);
-
-	if (!resolved.snapshot) {
-		return { ...resolved, repos: [], languages: [], dateCounts };
-	}
-
-	const [repos, languages] = await Promise.all([
-		getTrendingRepos(db, resolved.selectedDate),
-		getLanguageDistribution(db, resolved.selectedDate).catch(() => []),
-	]);
-
-	return { ...resolved, repos, languages, dateCounts };
 }

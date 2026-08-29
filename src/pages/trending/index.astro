@@ -1,9 +1,10 @@
 ---
 import ErrorFallback from "../../components/ErrorFallback.astro";
 import Layout from "../../layouts/Layout.astro";
+import { createArchiveService } from "../../lib/archive-service";
 import { formatDateDisplay, getMondayOfWeek } from "../../lib/dates";
 import { logError } from "../../lib/log";
-import { getDateRepoCounts, type DateRepoCount } from "../../lib/trending";
+import type { DateRepoCount } from "../../lib/trending";
 
 export const prerender = false;
 
@@ -11,8 +12,7 @@ let snapshots: DateRepoCount[] = [];
 let hasError = false;
 
 try {
-	const db = Astro.locals.runtime.env.DB;
-	snapshots = await getDateRepoCounts(db);
+	snapshots = (await createArchiveService(Astro.locals.runtime.env).getArchiveIndex()).snapshots;
 } catch (error) {
 	hasError = true;
 	Astro.response.status = 500;

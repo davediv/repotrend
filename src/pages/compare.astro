@@ -3,34 +3,39 @@ import ComparisonRow from "../components/ComparisonRow.astro";
 import ErrorFallback from "../components/ErrorFallback.astro";
 import Layout from "../layouts/Layout.astro";
 import {
-	buildComparisonRows,
-	comparisonCounts,
+	ArchiveValidationError,
+	createArchiveService,
+	type ArchiveIndexData,
+} from "../lib/archive-service";
+import {
 	filterComparisonRows,
 	parseComparisonView,
 	resolveComparisonSelection,
+	type ComparisonCounts,
+	type ComparisonRow as ComparisonRowData,
 	type ComparisonView,
 } from "../lib/comparison";
-import { formatDateDisplay, isValidBrowseDate } from "../lib/dates";
+import { formatDateDisplay } from "../lib/dates";
 import { logError } from "../lib/log";
-import {
-	getDateRepoCounts,
-	getTrendingRepos,
-	type DateRepoCount,
-	type TrendingRepo,
-} from "../lib/trending";
 
 export const prerender = false;
 
 const requestedDate1 = Astro.url.searchParams.get("date1")?.trim() ?? "";
 const requestedDate2 = Astro.url.searchParams.get("date2")?.trim() ?? "";
 const view = parseComparisonView(Astro.url.searchParams.get("view"));
-let dateCounts: DateRepoCount[] = [];
-let firstRepositories: TrendingRepo[] = [];
-let secondRepositories: TrendingRepo[] = [];
+const archive = createArchiveService(Astro.locals.runtime.env);
+let archiveIndex: ArchiveIndexData = {
+	snapshots: [],
+	dates: [],
+	earliest: null,
+	latest: null,
+};
+let allRows: ComparisonRowData[] = [];
+let counts: ComparisonCounts = { all: 0, both: 0, added: 0, removed: 0 };
 let hasError = false;
 
 try {
-	dateCounts = await getDateRepoCounts(Astro.locals.runtime.env.DB);
+	archiveIndex = await archive.getArchiveIndex();
 } catch (error) {
 	hasError = true;
 	Astro.response.status = 500;
@@ -38,38 +43,29 @@ try {
 	logError("compare_dates_ssr_error")(error);
 }
 
-const availableDates = dateCounts.map(({ date }) => date);
+const availableDates = archiveIndex.dates;
 const { date1, date2 } = resolveComparisonSelection(availableDates, requestedDate1, requestedDate2);
 let selectionError: string | null = null;
 
-if (!hasError) {
-	if (availableDates.length < 2) {
-		selectionError = "At least two captured snapshots are needed before dates can be compared.";
-	} else if (!date1 || !date2 || !isValidBrowseDate(date1) || !isValidBrowseDate(date2)) {
-		selectionError = "Choose two valid dates in YYYY-MM-DD format.";
-	} else if (date1 === date2) {
-		selectionError = "Choose two different dates to compare.";
-	} else if (!availableDates.includes(date1) || !availableDates.includes(date2)) {
-		selectionError = "Both dates must have a captured GitHub Trending snapshot.";
-	}
-}
-
-if (!hasError && !selectionError) {
+if (!hasError && availableDates.length < 2) {
+	selectionError = "At least two captured snapshots are needed before dates can be compared.";
+} else if (!hasError) {
 	try {
-		[firstRepositories, secondRepositories] = await Promise.all([
-			getTrendingRepos(Astro.locals.runtime.env.DB, date1),
-			getTrendingRepos(Astro.locals.runtime.env.DB, date2),
-		]);
+		const comparison = await archive.getComparison(date1, date2, archiveIndex);
+		allRows = comparison.rows;
+		counts = comparison.counts;
 	} catch (error) {
-		hasError = true;
-		Astro.response.status = 500;
-		Astro.response.statusText = "Internal Server Error";
-		logError("compare_repositories_ssr_error", { date1, date2 })(error);
+		if (error instanceof ArchiveValidationError) {
+			selectionError = error.message;
+		} else {
+			hasError = true;
+			Astro.response.status = 500;
+			Astro.response.statusText = "Internal Server Error";
+			logError("compare_repositories_ssr_error", { date1, date2 })(error);
+		}
 	}
 }
 
-const allRows = buildComparisonRows(firstRepositories, secondRepositories);
-const counts = comparisonCounts(allRows);
 const rows = filterComparisonRows(allRows, view);
 const date1Display = date1 ? formatDateDisplay(date1) : "First date";
 const date2Display = date2 ? formatDateDisplay(date2) : "Second date";
