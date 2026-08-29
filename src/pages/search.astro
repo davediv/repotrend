@@ -83,6 +83,8 @@ const titleContext = filters.query
 			method="get"
 			role="search"
 			aria-label="Search trending repos"
+			data-analytics-event="search_submit"
+			data-analytics-surface="search_page"
 		>
 			<div class="query-row">
 				<label for="search-page-input" class="search-page-icon">
@@ -139,7 +141,13 @@ const titleContext = filters.query
 			</details>
 		</form>
 
-		<div id="search-results" class="search-results" aria-live="polite">
+		<div
+			id="search-results"
+			class="search-results"
+			aria-live="polite"
+			data-analytics-view={!hasError && hasCriteria && results.length === 0 ? "empty_state_view" : undefined}
+			data-analytics-surface="search_results"
+		>
 			{hasError ? (
 				<ErrorFallback message="Search is temporarily unavailable. Please try again." />
 			) : parsed.error ? (

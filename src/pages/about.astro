@@ -1,0 +1,242 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+	title="About the Data — RepoTrend"
+	description="How RepoTrend captures, ranks, and interprets its GitHub Trending archive."
+>
+	<article class="about-page">
+		<header class="about-header">
+			<p>Methodology and limitations</p>
+			<h1>About the data</h1>
+			<span>How snapshots are captured, what the metrics mean, and where gaps can occur.</span>
+		</header>
+
+		<section aria-labelledby="source-heading">
+			<h2 id="source-heading">Source and scope</h2>
+			<p>
+				RepoTrend is an independent archive of the unfiltered, daily <a
+					href="https://github.com/trending?since=daily"
+					target="_blank"
+					rel="noopener noreferrer"
+					data-analytics-surface="about_data"
+				>GitHub Trending page<span class="sr-only"> (opens in new tab)</span></a>. It records the
+				repositories GitHub returns to an English-language request; it is not affiliated with or
+				endorsed by GitHub.
+			</p>
+			<p>
+				GitHub does not publish the ranking formula used by Trending. RepoTrend therefore archives
+				the observed result and source order—it does not claim to reproduce or explain GitHub's
+				algorithm.
+			</p>
+		</section>
+
+		<section aria-labelledby="schedule-heading">
+			<h2 id="schedule-heading">Capture schedule and timezone</h2>
+			<p>
+				The scheduled capture starts once each day at <strong>06:00 UTC</strong>. Dates, freshness
+				notices, and capture times use UTC. Fetch jitter and processing can make the recorded time a
+				few minutes later.
+			</p>
+			<p>
+				The homepage shows the latest successfully captured snapshot, which may be older than today.
+				A failed capture can be retried during the same UTC day, but GitHub does not provide RepoTrend
+				with a historical Trending endpoint, so a missed day may remain a permanent gap.
+			</p>
+		</section>
+
+		<section aria-labelledby="ranking-heading">
+			<h2 id="ranking-heading">Ranking and rollups</h2>
+			<ul>
+				<li><strong>Daily rank</strong> is the repository's position in GitHub's captured source order.</li>
+				<li>
+					<strong>Weekly rank</strong> first favors the number of captured days a repository appeared,
+					then its summed captured daily star gains. A partial-week label states how many daily
+					snapshots are included.
+				</li>
+				<li>
+					Search ordering favors exact and close name matches before broader owner, description, and
+					topic matches; it is not a Trending rank.
+				</li>
+			</ul>
+		</section>
+
+		<section aria-labelledby="metrics-heading">
+			<h2 id="metrics-heading">What the metrics mean</h2>
+			<dl>
+				<div>
+					<dt>Stars gained that day</dt>
+					<dd>The daily value displayed by GitHub Trending when the page was captured.</dd>
+				</div>
+				<div>
+					<dt>Total stars and forks</dt>
+					<dd>Point-in-time repository totals shown by GitHub at capture time.</dd>
+				</div>
+				<div>
+					<dt>Captured daily star gains</dt>
+					<dd>
+						A sum across dates present in this archive—not lifetime growth and not an estimate for
+						missing dates.
+					</dd>
+				</div>
+				<div>
+					<dt>Recorded total-star change</dt>
+					<dd>The difference between the first and latest captured point-in-time totals.</dd>
+				</div>
+			</dl>
+		</section>
+
+		<section aria-labelledby="completeness-heading">
+			<h2 id="completeness-heading">Completeness and known limits</h2>
+			<ul>
+				<li>An absent date means no usable snapshot was captured; it does not mean no repositories trended.</li>
+				<li>Language, descriptions, counts, and source markup can be absent or change upstream.</li>
+				<li>Topics are fetched separately from GitHub on a best-effort basis and may be incomplete.</li>
+				<li>Comparisons describe only the two selected captures and should not be read as continuous history.</li>
+			</ul>
+		</section>
+
+		<section aria-labelledby="privacy-heading">
+			<h2 id="privacy-heading">Product measurement and privacy</h2>
+			<p>
+				RepoTrend records a small set of aggregate interaction events—search submission, archive date
+				changes, empty states, completed comparisons, and outbound GitHub clicks—to find broken or
+					unused journeys. Event payloads contain the event name, interface surface, and URL path only;
+					they do not include search terms, repository queries, user identifiers, or the URL query string.
+			</p>
+		</section>
+
+		<nav class="about-actions" aria-label="About page actions">
+			<a href="/trending">Browse the archive</a>
+			<a href="/compare">Compare snapshots</a>
+		</nav>
+	</article>
+</Layout>
+
+<style>
+	.about-page {
+		max-width: 48rem;
+		margin: 0 auto;
+	}
+
+	.about-header {
+		margin-bottom: 2rem;
+	}
+
+	.about-header p,
+	.about-header h1,
+	.about-header span {
+		margin: 0;
+	}
+
+	.about-header p {
+		color: var(--color-text-secondary);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+	}
+
+	.about-header h1 {
+		font-size: 2rem;
+	}
+
+	.about-header span {
+		display: block;
+		margin-top: 0.375rem;
+		color: var(--color-text-secondary);
+	}
+
+	.about-page section {
+		margin-top: 1.75rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.about-page h2 {
+		margin: 0 0 0.75rem;
+		font-size: 1.25rem;
+	}
+
+	.about-page p,
+	.about-page ul,
+	.about-page dl {
+		margin: 0;
+	}
+
+	.about-page p + p {
+		margin-top: 0.75rem;
+	}
+
+	.about-page p,
+	.about-page li,
+	.about-page dd {
+		line-height: 1.65;
+	}
+
+	.about-page ul {
+		padding-left: 1.25rem;
+	}
+
+	.about-page li + li {
+		margin-top: 0.5rem;
+	}
+
+	.about-page a {
+		color: var(--color-link);
+	}
+
+	.about-page dl {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+	}
+
+	.about-page dl > div {
+		padding: 0.875rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		background: var(--color-bg-secondary);
+	}
+
+	.about-page dt {
+		font-weight: 600;
+	}
+
+	.about-page dd {
+		margin: 0.25rem 0 0;
+		color: var(--color-text-secondary);
+		font-size: 0.875rem;
+	}
+
+	.about-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 2rem;
+	}
+
+	.about-actions a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		padding: 0.625rem 1rem;
+		border: 1px solid var(--color-border);
+		border-radius: 6px;
+		font-weight: 600;
+		text-decoration: none;
+	}
+
+	.about-actions a:first-child {
+		border-color: var(--color-accent);
+		background: var(--color-accent);
+		color: var(--color-accent-text);
+	}
+
+	@media (max-width: 640px) {
+		.about-page dl {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

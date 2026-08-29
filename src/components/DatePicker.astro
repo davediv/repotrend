@@ -40,6 +40,8 @@ const periodName = viewMode === "weekly" ? "week" : "date";
 	<a
 		class:list={["date-nav-btn", { disabled: !previousHref }]}
 		data-action="prev"
+		data-analytics-event={previousHref ? "archive_date_change" : undefined}
+		data-analytics-surface={`${viewMode}_previous`}
 		href={previousHref}
 		aria-label={`Previous available ${periodName}`}
 		aria-disabled={previousHref ? undefined : "true"}
@@ -96,12 +98,16 @@ const periodName = viewMode === "weekly" ? "week" : "date";
 			step={viewMode === "weekly" ? "7" : undefined}
 			tabindex={-1}
 			aria-hidden="true"
+			data-analytics-event="archive_date_change"
+			data-analytics-surface={`${viewMode}_picker`}
 		/>
 	</div>
 
 	<a
 		class:list={["date-nav-btn", { disabled: !nextHref }]}
 		data-action="next"
+		data-analytics-event={nextHref ? "archive_date_change" : undefined}
+		data-analytics-surface={`${viewMode}_next`}
 		href={nextHref}
 		aria-label={`Next available ${periodName}`}
 		aria-disabled={nextHref ? undefined : "true"}

@@ -51,7 +51,12 @@ const starDeltaLabel =
 		{repository.description && <p>{repository.description}</p>}
 		<div class="repository-links">
 			{repository.language && <span class="repository-language">{repository.language}</span>}
-			<a href={githubUrl} target="_blank" rel="noopener noreferrer">
+			<a
+				href={githubUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+				data-analytics-surface="comparison_result"
+			>
 				GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (opens in new tab)</span>
 			</a>
 		</div>

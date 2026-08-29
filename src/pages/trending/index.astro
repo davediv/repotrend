@@ -70,7 +70,12 @@ const latestWeek = latestSnapshot ? getMondayOfWeek(latestSnapshot.date) : null;
 			</section>
 		</>
 	) : (
-		<div class="archive-empty" role="status">
+		<div
+			class="archive-empty"
+			role="status"
+			data-analytics-view="empty_state_view"
+			data-analytics-surface="archive_hub"
+		>
 			<h2>No snapshots yet</h2>
 			<p>The archive will appear here after the first GitHub Trending capture.</p>
 		</div>

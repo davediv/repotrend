@@ -134,14 +134,24 @@ const filters: Array<{ value: ComparisonView; label: string; count: number }> = 
 		{hasError ? (
 			<ErrorFallback message="The comparison could not be loaded. Please try again." />
 		) : selectionError ? (
-			<div class="compare-empty" role="alert">
+			<div
+				class="compare-empty"
+				role="alert"
+				data-analytics-view="empty_state_view"
+				data-analytics-surface="comparison_selection"
+			>
 				<h2>Comparison unavailable</h2>
 				<p>{selectionError}</p>
 				<a href="/trending">Browse captured dates</a>
 			</div>
 		) : (
 			<>
-				<section class="comparison-summary" aria-labelledby="comparison-summary-heading">
+				<section
+					class="comparison-summary"
+					aria-labelledby="comparison-summary-heading"
+					data-analytics-view="comparison_complete"
+					data-analytics-surface="comparison_results"
+				>
 					<div>
 						<h2 id="comparison-summary-heading">{date1Display} → {date2Display}</h2>
 						<p>{counts.all} unique repositories across both snapshots.</p>
@@ -179,7 +189,12 @@ const filters: Array<{ value: ComparisonView; label: string; count: number }> = 
 							))}
 						</ol>
 					) : (
-						<div class="compare-empty" role="status">
+						<div
+							class="compare-empty"
+							role="status"
+							data-analytics-view="empty_state_view"
+							data-analytics-surface="comparison_filter"
+						>
 							<h2>No {filters.find(({ value }) => value === view)?.label.toLowerCase()} repositories</h2>
 							<p>This comparison has no repositories in the selected category.</p>
 							<a href={filterHref("all")}>Show all comparison results</a>

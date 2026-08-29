@@ -30,6 +30,13 @@ export const GET: APIRoute = async ({ locals, site }) => {
 		changefreq: "daily",
 		priority: "1.0",
 	});
+	for (const path of ["/trending", "/search", "/compare", "/about"]) {
+		urls.push({
+			loc: `${origin}${path}`,
+			changefreq: path === "/about" ? "monthly" : "daily",
+			priority: path === "/trending" ? "0.9" : "0.6",
+		});
+	}
 
 	// Daily trending pages
 	for (const date of dates) {

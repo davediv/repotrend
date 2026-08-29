@@ -72,7 +72,13 @@ const starChangeLabel = `${starChange >= 0 ? "+" : ""}${formatNumber(starChange)
 						</h1>
 						{repository.description && <p class="repository-description">{repository.description}</p>}
 					</div>
-					<a class="github-action" href={githubUrl} target="_blank" rel="noopener noreferrer">
+					<a
+						class="github-action"
+						href={githubUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						data-analytics-surface="repository_detail"
+					>
 						Open on GitHub <span aria-hidden="true">↗</span>
 						<span class="sr-only">(opens in new tab)</span>
 					</a>

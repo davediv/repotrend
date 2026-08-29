@@ -13,7 +13,7 @@ interface Props {
 	message?: string;
 	/** Which SVG icon to show: "warning" (triangle) or "info" (circle). */
 	icon?: "warning" | "info";
-	/** Whether to show the "Try again" (reload) button. */
+	/** Whether to show the no-JavaScript-safe "Try again" link. */
 	showRetry?: boolean;
 	/** Semantic heading level. Embedded page errors default to an h2. */
 	headingLevel?: "h1" | "h2";
@@ -30,6 +30,7 @@ const {
 	homeLabel = "Back to homepage",
 } = Astro.props;
 const Heading = headingLevel;
+const retryHref = `${Astro.url.pathname}${Astro.url.search}`;
 ---
 
 <div class="error-fallback" role="alert">
@@ -51,7 +52,7 @@ const Heading = headingLevel;
 	<Heading class="error-heading">{heading}</Heading>
 	<p>{message}</p>
 	<div class="error-actions">
-		{showRetry && <button class="error-retry" onclick="location.reload()">Try again</button>}
+		{showRetry && <a class="error-retry" href={retryHref}>Try again</a>}
 		<a href="/" class="error-home">{homeLabel}</a>
 	</div>
 </div>

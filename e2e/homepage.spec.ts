@@ -102,12 +102,18 @@ test.describe("Homepage", () => {
 		await expect(page.locator(".calendar-heatmap")).toBeVisible();
 	});
 
-	test("renders footer with attribution links", async ({ page }) => {
+	test("renders footer with data-trust and source links", async ({ page }) => {
 		await page.goto("/");
 		const footer = page.locator("footer");
 		await expect(footer).toBeVisible();
-		await expect(footer).toContainText("Built with");
-		await expect(footer).toContainText("GitHub");
+		await expect(footer.getByRole("link", { name: "About the data" })).toHaveAttribute(
+			"href",
+			"/about",
+		);
+		await expect(footer.getByRole("link", { name: /RepoTrend source on GitHub/ })).toHaveAttribute(
+			"href",
+			"https://github.com/div-vik/repotrend",
+		);
 	});
 
 	test("uses semantic HTML landmarks", async ({ page }) => {

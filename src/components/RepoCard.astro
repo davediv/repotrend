@@ -129,7 +129,13 @@ const hiddenTopicCount = topics.length - visibleTopics.length;
 				{formatNumber(starsToday)} {starsLabel}
 			</span>
 
-			<a class="repo-github-link" href={githubUrl} target="_blank" rel="noopener noreferrer">
+			<a
+				class="repo-github-link"
+				href={githubUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+				data-analytics-surface="snapshot_card"
+			>
 				GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (opens in new tab)</span>
 			</a>
 		</div>

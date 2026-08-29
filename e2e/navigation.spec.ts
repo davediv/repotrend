@@ -23,6 +23,7 @@ test.describe("Global navigation", () => {
 			{ path: "/", active: "Today" },
 			{ path: "/trending", active: "Archive" },
 			{ path: "/trending/2026-02-15", active: "Archive" },
+			{ path: "/repos/facebook/react", active: "Archive" },
 			{ path: "/compare", active: "Compare" },
 		];
 

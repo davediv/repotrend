@@ -96,8 +96,8 @@ test.describe("Dark Mode", () => {
 
 		const bgColor = await card.evaluate((el) => getComputedStyle(el).backgroundColor);
 		const match = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-		expect(match).not.toBeNull();
-		const [, r, g, b] = match!.map(Number);
+		if (!match) throw new Error(`Unexpected card background color: ${bgColor}`);
+		const [, r, g, b] = match.map(Number);
 		expect(r).toBeLessThan(100);
 		expect(g).toBeLessThan(100);
 		expect(b).toBeLessThan(100);

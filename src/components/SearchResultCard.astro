@@ -54,7 +54,13 @@ const remainingDates = repository.dates.slice(10);
 				<span class="sr-only">Forks:</span>
 				{formatNumber(repository.forks)}
 			</span>
-			<a class="result-github-link" href={githubUrl} target="_blank" rel="noopener noreferrer">
+			<a
+				class="result-github-link"
+				href={githubUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+				data-analytics-surface="search_result"
+			>
 				GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (opens in new tab)</span>
 			</a>
 		</div>
