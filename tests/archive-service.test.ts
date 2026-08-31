@@ -1,10 +1,25 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ArchiveValidationError, createArchiveService } from "../src/lib/archive-service";
+import type {
+	LanguageDistribution,
+	TrendingRepo,
+	WeeklyTrendingResponse,
+} from "../src/lib/trending";
 
 beforeAll(() => {
 	vi.spyOn(console, "log").mockImplementation(() => {});
 	vi.spyOn(console, "error").mockImplementation(() => {});
 });
+
+function deferred<T>() {
+	let resolve!: (value: T) => void;
+	let reject!: (reason?: unknown) => void;
+	const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+		resolve = resolvePromise;
+		reject = rejectPromise;
+	});
+	return { promise, resolve, reject };
+}
 
 function cacheStore() {
 	const values = new Map<string, string>();
@@ -116,5 +131,93 @@ describe("ArchiveService", () => {
 		expect(result.repos).toHaveLength(1);
 		expect(result.languages).toEqual([]);
 		expect(result.support).toEqual({ languages: "unavailable", dateIndex: "ready" });
+	});
+
+	it("loads daily repositories and supporting languages concurrently", async () => {
+		const archive = createArchiveService({ DB: {} as D1Database }, { today: "2026-02-15" });
+		vi.spyOn(archive, "getArchiveIndex").mockResolvedValue({
+			snapshots: [{ date: "2026-02-14", count: 1, scraped_at: "2026-02-14T06:00:00Z" }],
+			dates: ["2026-02-14"],
+			earliest: "2026-02-14",
+			latest: "2026-02-14",
+		});
+
+		const repositories = deferred<TrendingRepo[]>();
+		const languages = deferred<LanguageDistribution[]>();
+		const started: string[] = [];
+		vi.spyOn(archive, "getDailyRepos").mockImplementation(() => {
+			started.push("repositories");
+			return repositories.promise;
+		});
+		vi.spyOn(archive, "getDailyLanguages").mockImplementation(() => {
+			started.push("languages");
+			return languages.promise;
+		});
+
+		const pending = archive.getDailyArchive({ mode: "exact", date: "2026-02-14" });
+		await vi.waitFor(() => expect(started).toEqual(["repositories", "languages"]));
+
+		repositories.resolve([
+			{
+				repo_owner: "openai",
+				repo_name: "codex",
+				description: "Coding agent",
+				language: "Rust",
+				language_color: "#dea584",
+				total_stars: 100,
+				forks: 10,
+				stars_today: 20,
+			},
+		]);
+		languages.resolve([{ language: "Rust", color: "#dea584", count: 1, percentage: 100 }]);
+
+		await expect(pending).resolves.toMatchObject({
+			repos: [{ repo_name: "codex" }],
+			languages: [{ language: "Rust" }],
+		});
+	});
+
+	it("loads the weekly snapshot and supporting data concurrently", async () => {
+		const archive = createArchiveService({ DB: {} as D1Database }, { today: "2026-02-15" });
+		const snapshot = deferred<WeeklyTrendingResponse>();
+		const languages = deferred<LanguageDistribution[]>();
+		const archiveIndex = deferred<{
+			snapshots: [];
+			dates: [];
+			earliest: null;
+			latest: null;
+		}>();
+		const started: string[] = [];
+
+		vi.spyOn(archive, "getWeeklySnapshot").mockImplementation(() => {
+			started.push("snapshot");
+			return snapshot.promise;
+		});
+		vi.spyOn(archive, "getWeeklyLanguages").mockImplementation(() => {
+			started.push("languages");
+			return languages.promise;
+		});
+		vi.spyOn(archive, "getArchiveIndex").mockImplementation(() => {
+			started.push("date index");
+			return archiveIndex.promise;
+		});
+
+		const pending = archive.getWeeklyArchive("2026-02-09");
+		await vi.waitFor(() => expect(started).toEqual(["snapshot", "languages", "date index"]));
+
+		snapshot.resolve({
+			week_start: "2026-02-09",
+			week_end: "2026-02-15",
+			partial: false,
+			days_captured: 7,
+			repos: [],
+		});
+		languages.resolve([]);
+		archiveIndex.resolve({ snapshots: [], dates: [], earliest: null, latest: null });
+
+		await expect(pending).resolves.toMatchObject({
+			week_start: "2026-02-09",
+			support: { languages: "ready", dateIndex: "ready" },
+		});
 	});
 });

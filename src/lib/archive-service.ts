@@ -1,8 +1,8 @@
 import {
 	buildComparisonRows,
-	comparisonCounts,
 	type ComparisonCounts,
 	type ComparisonRow,
+	comparisonCounts,
 } from "./comparison";
 import {
 	type ArchiveSupportState,
@@ -20,12 +20,12 @@ import {
 	type RepositoryIdentity,
 } from "./repository";
 import {
+	type DateRepoCount,
 	getDateRepoCounts,
 	getLanguageDistribution,
 	getTrendingRepos,
 	getWeeklyLanguageDistribution,
 	getWeeklyTrendingRepos,
-	type DateRepoCount,
 	type LanguageDistribution,
 	type TrendingRepo,
 	type WeeklyTrendingResponse,
@@ -250,11 +250,41 @@ export class ArchiveService {
 		let resolved = archiveIndex
 			? resolveDailyArchiveSelection(dateCounts, selection)
 			: { selectedDate: requestedDate, snapshot: null };
-		let repos: TrendingRepo[] = [];
+		const support: ArchiveSupportState = {
+			languages: "ready",
+			dateIndex: archiveIndex ? "ready" : "unavailable",
+		};
+		if (selection.mode === "latest") {
+			support.dateIndex = "ready";
+		}
 
 		if (resolved.snapshot) {
-			repos = await this.getDailyRepos(resolved.selectedDate);
-		} else if (!archiveIndex && selection.mode === "exact") {
+			const [repositoryResult, languageResult] = await Promise.allSettled([
+				this.getDailyRepos(resolved.selectedDate),
+				this.getDailyLanguages(resolved.selectedDate),
+			]);
+			if (repositoryResult.status === "rejected") throw repositoryResult.reason;
+
+			if (languageResult.status === "rejected") {
+				support.languages = "unavailable";
+				logError("archive_supporting_query_error", {
+					view: "daily",
+					date: resolved.selectedDate,
+					resource: "languages",
+				})(languageResult.reason);
+			}
+
+			return {
+				...resolved,
+				repos: repositoryResult.value,
+				languages: languageResult.status === "fulfilled" ? languageResult.value : [],
+				dateCounts,
+				support,
+			};
+		}
+
+		let repos: TrendingRepo[] = [];
+		if (!archiveIndex && selection.mode === "exact") {
 			repos = await this.getDailyRepos(resolved.selectedDate);
 			if (repos.length > 0) {
 				resolved = {
@@ -262,14 +292,6 @@ export class ArchiveService {
 					snapshot: { date: resolved.selectedDate, count: repos.length, scraped_at: null },
 				};
 			}
-		}
-
-		const support: ArchiveSupportState = {
-			languages: "ready",
-			dateIndex: archiveIndex ? "ready" : "unavailable",
-		};
-		if (selection.mode === "latest") {
-			support.dateIndex = "ready";
 		}
 
 		if (!resolved.snapshot) {
@@ -287,7 +309,6 @@ export class ArchiveService {
 				resource: "languages",
 			})(error);
 		}
-
 		return { ...resolved, repos, languages, dateCounts, support };
 	}
 
@@ -332,11 +353,13 @@ export class ArchiveService {
 
 	async getWeeklyArchive(rawDate: string): Promise<WeeklyArchiveData> {
 		const date = this.validateDate(rawDate);
-		const snapshot = await this.getWeeklySnapshot(date);
-		const [languageResult, archiveIndexResult] = await Promise.allSettled([
+		const [snapshotResult, languageResult, archiveIndexResult] = await Promise.allSettled([
+			this.getWeeklySnapshot(date),
 			this.getWeeklyLanguages(date),
 			this.getArchiveIndex(),
 		]);
+		if (snapshotResult.status === "rejected") throw snapshotResult.reason;
+
 		const support: ArchiveSupportState = {
 			languages: languageResult.status === "fulfilled" ? "ready" : "unavailable",
 			dateIndex: archiveIndexResult.status === "fulfilled" ? "ready" : "unavailable",
@@ -358,7 +381,7 @@ export class ArchiveService {
 		}
 
 		return {
-			...snapshot,
+			...snapshotResult.value,
 			languages: languageResult.status === "fulfilled" ? languageResult.value : [],
 			dateCounts:
 				archiveIndexResult.status === "fulfilled" ? archiveIndexResult.value.snapshots : [],
