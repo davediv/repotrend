@@ -9,8 +9,8 @@ import {
 	getSearchLanguages,
 	MIN_SEARCH_QUERY_LENGTH,
 	parseSearchRequest,
-	searchArchive,
 	SEARCH_PAGE_SIZE,
+	searchArchive,
 } from "../lib/search";
 import type { SearchResult } from "../lib/search-types";
 
@@ -186,30 +186,6 @@ const titleContext = filters.query
 		</div>
 	</div>
 </Layout>
-
-<script>
-	const form = document.querySelector<HTMLFormElement>(".search-page-form");
-	const input = document.getElementById("search-page-input") as HTMLInputElement | null;
-	let debounceTimer: ReturnType<typeof setTimeout>;
-	const initialQuery = input?.value.trim() ?? "";
-
-	function enhancedSearch(): void {
-		if (!form || !input) return;
-		const query = input.value.trim();
-		if (query === initialQuery || (query.length > 0 && query.length < 2)) return;
-
-		const target = new URL(form.action);
-		new FormData(form).forEach((value, key) => {
-			if (typeof value === "string" && value.trim()) target.searchParams.set(key, value.trim());
-		});
-		window.location.assign(`${target.pathname}${target.search}`);
-	}
-
-	input?.addEventListener("input", () => {
-		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(enhancedSearch, 600);
-	});
-</script>
 
 <style>
 	.search-page {

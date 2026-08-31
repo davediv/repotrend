@@ -131,9 +131,16 @@ test.describe("Search", () => {
 		await expect(page.locator(".pagination-next")).toHaveAttribute("href", /page=2/);
 	});
 
-	test("enhances text search with a debounced shareable URL", async ({ page }) => {
+	test("waits for explicit submission before running a text search", async ({ page }) => {
 		await page.goto("/search");
-		await page.locator("#search-page-input").fill("next.js");
+		const searchInput = page.locator("#search-page-input");
+		await searchInput.fill("next.js");
+		await page.waitForTimeout(800);
+		await expect(page).toHaveURL(/\/search$/);
+		await expect(searchInput).toBeFocused();
+		await expect(searchInput).toHaveValue("next.js");
+
+		await searchInput.press("Enter");
 		await expect(page).toHaveURL(/\/search\?q=next\.js/, { timeout: 5000 });
 		const result = page.locator(".search-result-card").first();
 		await expect(result.locator(".repo-owner")).toHaveText("vercel");
