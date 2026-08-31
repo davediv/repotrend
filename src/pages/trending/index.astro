@@ -20,6 +20,11 @@ try {
 	logError("archive_hub_ssr_error")(error);
 }
 
+Astro.response.headers.set(
+	"Cache-Control",
+	hasError ? "no-store" : "public, max-age=300, s-maxage=300",
+);
+
 const recentSnapshots = snapshots.slice(-12).reverse();
 const latestSnapshot = recentSnapshots[0] ?? null;
 const latestWeek = latestSnapshot ? getMondayOfWeek(latestSnapshot.date) : null;

@@ -7,8 +7,8 @@ import { formatNumber, sanitizeHexColor } from "../../../lib/format";
 import { logError } from "../../../lib/log";
 import {
 	githubRepositoryUrl,
-	repositoryPath,
 	type RepositoryArchive,
+	repositoryPath,
 } from "../../../lib/repository";
 
 export const prerender = false;
@@ -46,6 +46,11 @@ const githubUrl = repository
 const languageColor = repository ? sanitizeHexColor(repository.language_color) : null;
 const starChange = repository?.star_change ?? 0;
 const starChangeLabel = `${starChange >= 0 ? "+" : ""}${formatNumber(starChange)}`;
+
+Astro.response.headers.set(
+	"Cache-Control",
+	hasError ? "no-store" : "public, max-age=300, s-maxage=300",
+);
 ---
 
 <Layout

@@ -25,6 +25,10 @@ function applySecurityHeaders(response: Response): void {
 	for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
 		response.headers.set(key, value);
 	}
+
+	if (response.status >= 400) {
+		response.headers.set("Cache-Control", "no-store");
+	}
 }
 
 /**
@@ -53,7 +57,7 @@ export const onRequest: MiddlewareHandler = async (context, next) => {
 
 		const response = new Response(errorPageHTML, {
 			status: 500,
-			headers: { "Content-Type": "text/html; charset=utf-8" },
+			headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
 		});
 		applySecurityHeaders(response);
 		return response;

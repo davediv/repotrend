@@ -1,6 +1,10 @@
 ---
 import DailyArchivePage from "../../components/DailyArchivePage.astro";
-import { ArchiveValidationError, createArchiveService } from "../../lib/archive-service";
+import {
+	ArchiveValidationError,
+	createArchiveService,
+	dailyArchiveCacheControl,
+} from "../../lib/archive-service";
 import type { DailyArchiveData } from "../../lib/daily-archive";
 import { todayUTC } from "../../lib/dates";
 import { logError } from "../../lib/log";
@@ -41,6 +45,11 @@ try {
 	Astro.response.statusText = "Internal Server Error";
 	logError("trending_date_ssr_error", { date })(error);
 }
+
+Astro.response.headers.set(
+	"Cache-Control",
+	hasError ? "no-store" : dailyArchiveCacheControl(date, today),
+);
 ---
 
 <DailyArchivePage data={data} today={today} context="archive" hasError={hasError} />

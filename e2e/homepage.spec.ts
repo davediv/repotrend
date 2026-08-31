@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Homepage", () => {
 	test("loads with correct page title", async ({ page }) => {
-		await page.goto("/");
+		const response = await page.goto("/");
+		expect(response?.headers()["cache-control"]).toContain("max-age=300");
 		await expect(page).toHaveTitle("GitHub Trending Today — RepoTrend");
 	});
 

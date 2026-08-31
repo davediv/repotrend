@@ -1,25 +1,29 @@
 ---
-import Layout from "../../../layouts/Layout.astro";
+import ArchiveInsights from "../../../components/ArchiveInsights.astro";
 import DatePicker from "../../../components/DatePicker.astro";
+import ErrorFallback from "../../../components/ErrorFallback.astro";
+import Pagination from "../../../components/Pagination.astro";
+import RepoCardList from "../../../components/RepoCardList.astro";
+import SortDropdown from "../../../components/SortDropdown.astro";
 import Toolbar from "../../../components/Toolbar.astro";
 import ViewToggle from "../../../components/ViewToggle.astro";
-import SortDropdown from "../../../components/SortDropdown.astro";
-import RepoCardList from "../../../components/RepoCardList.astro";
-import ErrorFallback from "../../../components/ErrorFallback.astro";
-import { ArchiveValidationError, createArchiveService } from "../../../lib/archive-service";
+import Layout from "../../../layouts/Layout.astro";
+import { archivePeriodHref, getAdjacentArchivePeriods } from "../../../lib/archive-navigation";
+import {
+	ArchiveValidationError,
+	createArchiveService,
+	weeklyArchiveCacheControl,
+} from "../../../lib/archive-service";
+import type { ArchiveSupportState } from "../../../lib/daily-archive";
 import { formatWeekRange, getMondayOfWeek } from "../../../lib/dates";
 import { logError } from "../../../lib/log";
+import { paginate, parsePageParam } from "../../../lib/pagination";
+import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
 import type {
 	DateRepoCount,
 	LanguageDistribution,
 	WeeklyTrendingRepo,
 } from "../../../lib/trending";
-import type { ArchiveSupportState } from "../../../lib/daily-archive";
-import { parseSortParam, sortWeeklyRepos } from "../../../lib/sort";
-import { paginate, parsePageParam } from "../../../lib/pagination";
-import Pagination from "../../../components/Pagination.astro";
-import ArchiveInsights from "../../../components/ArchiveInsights.astro";
-import { archivePeriodHref, getAdjacentArchivePeriods } from "../../../lib/archive-navigation";
 
 export const prerender = false;
 
@@ -93,6 +97,11 @@ if (!hasError && allRepos.length === 0) {
 	}
 	emptyActions.push({ href: "/search", label: "Search archive" });
 }
+
+Astro.response.headers.set(
+	"Cache-Control",
+	hasError ? "no-store" : weeklyArchiveCacheControl(monday),
+);
 ---
 
 <Layout

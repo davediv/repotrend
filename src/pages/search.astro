@@ -64,6 +64,11 @@ const titleContext = filters.query
 	: filters.topic
 		? `#${filters.topic}`
 		: filters.language || "Archive";
+
+Astro.response.headers.set(
+	"Cache-Control",
+	hasError || parsed.error ? "no-store" : "public, max-age=60, s-maxage=60",
+);
 ---
 
 <Layout

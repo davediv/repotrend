@@ -7,7 +7,8 @@ test.describe("Weekly Archive", () => {
 	});
 
 	test("weekly view page loads with title containing week range", async ({ page }) => {
-		await page.goto("/trending/week/2026-02-09");
+		const response = await page.goto("/trending/week/2026-02-09");
+		expect(response?.headers()["cache-control"]).toContain("immutable");
 		// Title format: "Trending Feb 9 – <formatted> — RepoTrend"
 		await expect(page).toHaveTitle(/Trending.*Feb 9.*RepoTrend/);
 		await expect(

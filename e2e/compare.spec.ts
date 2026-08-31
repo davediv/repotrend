@@ -18,7 +18,8 @@ test.describe("Compare", () => {
 	});
 
 	test("renders one aligned diff with explicit statuses and deltas", async ({ page }) => {
-		await page.goto(comparisonUrl);
+		const response = await page.goto(comparisonUrl);
+		expect(response?.headers()["cache-control"]).toContain("immutable");
 		await expect(page.locator('.comparison-row[data-status="both"]')).toHaveCount(24);
 		await expect(page.locator('.comparison-row[data-status="added"]')).toHaveCount(1);
 		await expect(page.locator('.comparison-row[data-status="removed"]')).toHaveCount(1);

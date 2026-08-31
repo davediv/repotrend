@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Date Navigation", () => {
 	test("navigates to a specific date via URL", async ({ page }) => {
-		await page.goto("/trending/2026-02-15");
+		const response = await page.goto("/trending/2026-02-15");
+		expect(response?.headers()["cache-control"]).toContain("immutable");
 		await expect(page).toHaveTitle(/February 15, 2026/);
 		const cards = page.locator(".repo-card");
 		await expect(cards).toHaveCount(25);
@@ -140,6 +141,7 @@ test.describe("Date Navigation", () => {
 		const response = await page.goto("/route-that-does-not-exist");
 
 		expect(response?.status()).toBe(404);
+		expect(response?.headers()["cache-control"]).toBe("no-store");
 		await expect(page).toHaveTitle("Page Not Found — RepoTrend");
 		await expect(page.getByRole("heading", { level: 1 })).toHaveText("404 — Page Not Found");
 	});

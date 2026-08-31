@@ -14,7 +14,8 @@ test.describe("Repository archive", () => {
 	test("shows repository metadata, archive summary, and every appearance link", async ({
 		page,
 	}) => {
-		await page.goto("/repos/facebook/react");
+		const response = await page.goto("/repos/facebook/react");
+		expect(response?.headers()["cache-control"]).toContain("max-age=300");
 
 		await expect(page).toHaveTitle(/facebook\/react Trending History/);
 		await expect(page.getByRole("heading", { name: "Archive summary" })).toBeVisible();

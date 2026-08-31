@@ -3,17 +3,18 @@ import ComparisonRow from "../components/ComparisonRow.astro";
 import ErrorFallback from "../components/ErrorFallback.astro";
 import Layout from "../layouts/Layout.astro";
 import {
-	ArchiveValidationError,
-	createArchiveService,
 	type ArchiveIndexData,
+	ArchiveValidationError,
+	comparisonArchiveCacheControl,
+	createArchiveService,
 } from "../lib/archive-service";
 import {
-	filterComparisonRows,
-	parseComparisonView,
-	resolveComparisonSelection,
 	type ComparisonCounts,
 	type ComparisonRow as ComparisonRowData,
 	type ComparisonView,
+	filterComparisonRows,
+	parseComparisonView,
+	resolveComparisonSelection,
 } from "../lib/comparison";
 import { formatDateDisplay } from "../lib/dates";
 import { logError } from "../lib/log";
@@ -84,6 +85,11 @@ const filters: Array<{ value: ComparisonView; label: string; count: number }> = 
 	{ value: "added", label: "Added", count: counts.added },
 	{ value: "removed", label: "Removed", count: counts.removed },
 ];
+
+Astro.response.headers.set(
+	"Cache-Control",
+	hasError || selectionError ? "no-store" : comparisonArchiveCacheControl(date1, date2),
+);
 ---
 
 <Layout

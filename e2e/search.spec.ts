@@ -23,7 +23,8 @@ test.describe("Search", () => {
 		page.on("request", (request) => {
 			if (new URL(request.url()).pathname === "/api/search") apiRequests++;
 		});
-		await page.goto("/search?q=react");
+		const response = await page.goto("/search?q=react");
+		expect(response?.headers()["cache-control"]).toContain("max-age=60");
 		const searchInput = page.locator("#search-page-input");
 		await expect(searchInput).toBeVisible();
 		await expect(searchInput).toHaveValue("react");
