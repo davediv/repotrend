@@ -13,6 +13,7 @@ test.describe("Weekly Archive", () => {
 		await expect(
 			page.getByRole("heading", { level: 1, name: /GitHub Trending.*Feb 9/ }),
 		).toBeVisible();
+		await expect(page.locator(".repo-card").first().locator(".repo-card-icon")).toHaveCount(4);
 	});
 
 	test("partial weeks disclose captured-day coverage", async ({ page }) => {

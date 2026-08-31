@@ -1,9 +1,9 @@
 ---
+import type { TrendingRepo, WeeklyTrendingRepo } from "../lib/trending";
 // Server-rendered repo card list. Repos are fetched during SSR and passed as props,
 // eliminating the client-side fetch that previously delayed LCP and caused CLS.
 // Shared styles live in src/styles/repo-card.css (imported globally via Layout.astro).
 import RepoCard from "./RepoCard.astro";
-import type { TrendingRepo, WeeklyTrendingRepo } from "../lib/trending";
 
 interface Props {
 	viewMode?: "daily" | "weekly";
@@ -32,26 +32,46 @@ const emptyMessage =
 ---
 
 {repos.length > 0 ? (
-	<ol id="results" class="card-list-results" aria-label={isWeekly ? "Weekly trending repositories" : "Trending repositories"}>
-		{repos.map((repo, i) => (
-			<li>
-				<RepoCard
-					rank={rankOffset + i + 1}
-					repoOwner={repo.repo_owner}
-					repoName={repo.repo_name}
-					description={repo.description}
-					language={repo.language}
-					languageColor={repo.language_color}
-					topics={repo.topics}
-					totalStars={repo.total_stars}
-					forks={repo.forks}
-					starsToday={isWeekly ? (repo as WeeklyTrendingRepo).total_stars_gained : (repo as TrendingRepo).stars_today}
-					viewMode={viewMode}
-					appearances={isWeekly ? (repo as WeeklyTrendingRepo).appearances : undefined}
-				/>
-			</li>
-		))}
-	</ol>
+	<>
+		<svg class="repo-icon-sprite" aria-hidden="true" focusable="false">
+			<symbol id="repo-icon-star" viewBox="0 0 24 24">
+				<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+			</symbol>
+			<symbol id="repo-icon-fork" viewBox="0 0 24 24">
+				<circle cx="12" cy="18" r="3"></circle>
+				<circle cx="6" cy="6" r="3"></circle>
+				<circle cx="18" cy="6" r="3"></circle>
+				<path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"></path>
+				<path d="M12 12v3"></path>
+			</symbol>
+			<symbol id="repo-icon-calendar" viewBox="0 0 24 24">
+				<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+				<line x1="16" y1="2" x2="16" y2="6"></line>
+				<line x1="8" y1="2" x2="8" y2="6"></line>
+				<line x1="3" y1="10" x2="21" y2="10"></line>
+			</symbol>
+		</svg>
+		<ol id="results" class="card-list-results" aria-label={isWeekly ? "Weekly trending repositories" : "Trending repositories"}>
+			{repos.map((repo, i) => (
+				<li>
+					<RepoCard
+						rank={rankOffset + i + 1}
+						repoOwner={repo.repo_owner}
+						repoName={repo.repo_name}
+						description={repo.description}
+						language={repo.language}
+						languageColor={repo.language_color}
+						topics={repo.topics}
+						totalStars={repo.total_stars}
+						forks={repo.forks}
+						starsToday={isWeekly ? (repo as WeeklyTrendingRepo).total_stars_gained : (repo as TrendingRepo).stars_today}
+						viewMode={viewMode}
+						appearances={isWeekly ? (repo as WeeklyTrendingRepo).appearances : undefined}
+					/>
+				</li>
+			))}
+		</ol>
+	</>
 ) : (
 	<div
 		class="card-list-empty"
@@ -77,6 +97,13 @@ const emptyMessage =
 )}
 
 <style>
+	.repo-icon-sprite {
+		position: absolute;
+		width: 0;
+		height: 0;
+		overflow: hidden;
+	}
+
 	.card-list-results {
 		display: flex;
 		flex-direction: column;

@@ -57,6 +57,8 @@ test.describe("Homepage", () => {
 			/^https:\/\/github\.com\//,
 		);
 		await expect(firstCard.locator(".repo-meta")).toBeVisible();
+		await expect(firstCard.locator(".repo-card-icon")).toHaveCount(3);
+		await expect(firstCard.locator(".repo-card-icon").first()).toBeVisible();
 	});
 
 	test("repo cards display language with color dot", async ({ page }) => {
