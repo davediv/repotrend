@@ -1,6 +1,5 @@
 ---
 import type { DateRepoCount } from "../lib/trending";
-import { formatWeekRange, getMondayOfWeek, parseDate, toDateString } from "../lib/dates";
 
 interface Props {
 	/** Repo counts per date, sorted chronologically (oldest first). */
@@ -14,80 +13,14 @@ interface Props {
 const { dateCounts, selectedDate, viewMode = "daily" } = Astro.props;
 
 if (dateCounts.length === 0) return;
-
-const countMap = new Map(dateCounts.map((d) => [d.date, d.count]));
-const latest = parseDate(dateCounts[dateCounts.length - 1].date);
-const startDate = parseDate(getMondayOfWeek(dateCounts[0].date));
-const endDate = new Date(latest);
-const endDow = endDate.getDay();
-if (endDow !== 0) endDate.setDate(endDate.getDate() + (7 - endDow));
-
-interface Cell {
-	date: string;
-	count: number;
-}
-
-const weeks: Cell[][] = [];
-const cursor = new Date(startDate);
-
-while (cursor <= endDate) {
-	const week: Cell[] = [];
-	for (let d = 0; d < 7; d++) {
-		const date = toDateString(cursor);
-		week.push({ date, count: countMap.get(date) ?? 0 });
-		cursor.setDate(cursor.getDate() + 1);
-	}
-	weeks.push(week);
-}
-
-interface MonthLabel {
-	label: string;
-	col: number;
-}
-
-const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "short" });
-const monthLabels: MonthLabel[] = [];
-let previousMonth = -1;
-for (let i = 0; i < weeks.length; i++) {
-	const date = parseDate(weeks[i][0].date);
-	const month = date.getMonth();
-	if (month !== previousMonth) {
-		monthLabels.push({ label: monthFormatter.format(date), col: i });
-		previousMonth = month;
-	}
-}
-
-function level(count: number): number {
-	if (count === 0) return 0;
-	if (count <= 6) return 1;
-	if (count <= 12) return 2;
-	if (count <= 18) return 3;
-	return 4;
-}
-
-const tooltipFormatter = new Intl.DateTimeFormat("en-US", {
-	month: "short",
-	day: "numeric",
-	year: "numeric",
-});
-
-function tooltip(date: string, count: number): string {
-	const formatted = tooltipFormatter.format(parseDate(date));
-	return count === 0
-		? `No data on ${formatted}`
-		: `${count} ${count === 1 ? "repo" : "repos"} on ${formatted}`;
-}
-
-const selectedPeriod = selectedDate
-	? viewMode === "weekly"
-		? getMondayOfWeek(selectedDate)
-		: selectedDate
-	: undefined;
-const DOW_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
-const totalWeeks = weeks.length;
 ---
 
-<details class="calendar-heatmap">
+<details
+	class="calendar-heatmap"
+	data-date-counts={JSON.stringify(dateCounts)}
+	data-selected-date={selectedDate}
+	data-view-mode={viewMode}
+>
 	<summary>
 		<span>Activity heatmap</span>
 		<span class="heatmap-summary-meta">Optional visual overview</span>
@@ -96,69 +29,46 @@ const totalWeeks = weeks.length;
 		<p class="heatmap-help">
 			Each square represents a captured day. Use the available {viewMode === "weekly" ? "weeks" : "dates"} list above for larger navigation targets.
 		</p>
-		<div class="heatmap-body">
-			<div class="dow-labels" aria-hidden="true">
-				{DOW_LABELS.map((label) => (
-					<span class="dow-label">{label}</span>
-				))}
-			</div>
-			<div class="heatmap-scroll">
-				<div
-					class="month-row"
-					style={`grid-template-columns: repeat(${totalWeeks}, var(--cell-size))`}
-				>
-					{monthLabels.map(({ label, col }) => (
-						<span class="month-label" style={`grid-column: ${col + 1}`}>{label}</span>
-					))}
-				</div>
-				<div class="cell-grid" aria-label="Archive activity by date">
-					{weeks.flatMap((week) =>
-						week.map((cell) => {
-							const intensity = level(cell.count);
-							const tip = tooltip(cell.date, cell.count);
-							const destinationDate = viewMode === "weekly" ? getMondayOfWeek(cell.date) : cell.date;
-							const isSelected = destinationDate === selectedPeriod;
-							const href = viewMode === "weekly"
-								? `/trending/week/${destinationDate}`
-								: `/trending/${destinationDate}`;
-							const label = viewMode === "weekly"
-								? `${tip}. View weekly rollup for ${formatWeekRange(destinationDate)}.`
-								: `${tip}. View daily snapshot.`;
-
-							return cell.count > 0 ? (
-								<a
-									href={href}
-									class:list={["heatmap-cell", `level-${intensity}`, { selected: isSelected }]}
-									title={tip}
-									aria-label={label}
-									data-date={cell.date}
-								/>
-							) : (
-								<span
-									class:list={["heatmap-cell", "level-0", { selected: isSelected }]}
-									title={tip}
-									data-date={cell.date}
-									aria-hidden="true"
-								/>
-							);
-						}),
-					)}
-				</div>
-			</div>
-		</div>
-		<div class="heatmap-legend" aria-hidden="true">
-			<span class="legend-text">Less</span>
-			<span class="legend-cell level-0" />
-			<span class="legend-cell level-1" />
-			<span class="legend-cell level-2" />
-			<span class="legend-cell level-3" />
-			<span class="legend-cell level-4" />
-			<span class="legend-text">More</span>
+		<div class="heatmap-visualization" aria-live="polite">
+			<p class="heatmap-loading">Loading activity heatmap…</p>
+			<noscript>
+				<p class="heatmap-fallback">JavaScript is required for this optional visualization. The available periods list above remains fully usable.</p>
+			</noscript>
 		</div>
 	</div>
 </details>
 
-<style>
+<script>
+	for (const heatmap of document.querySelectorAll<HTMLDetailsElement>(
+		".calendar-heatmap:not([data-loader-ready])",
+	)) {
+		heatmap.dataset.loaderReady = "true";
+		heatmap.addEventListener(
+			"toggle",
+			async () => {
+				if (!heatmap.open) return;
+
+				try {
+					const { renderCalendarHeatmap } = await import("../scripts/calendar-heatmap");
+					renderCalendarHeatmap(heatmap);
+				} catch (error) {
+					console.error("Unable to render the archive activity heatmap", error);
+					const visualization = heatmap.querySelector<HTMLElement>(".heatmap-visualization");
+					if (visualization) {
+						const message = document.createElement("p");
+						message.className = "heatmap-fallback";
+						message.textContent =
+							"The activity heatmap could not be loaded. Use the available periods list above.";
+						visualization.replaceChildren(message);
+					}
+				}
+			},
+			{ once: true },
+		);
+	}
+</script>
+
+<style is:global>
 	.calendar-heatmap {
 		--cell-size: 24px;
 		--cell-gap: 4px;
@@ -181,36 +91,43 @@ const totalWeeks = weeks.length;
 		cursor: pointer;
 	}
 
-	.heatmap-summary-meta {
+	.calendar-heatmap .heatmap-summary-meta {
 		color: var(--color-text-secondary);
 		font-size: 0.75rem;
 		font-weight: 400;
 	}
 
-	.heatmap-content {
+	.calendar-heatmap .heatmap-content {
 		padding: 1rem;
 		border-top: 1px solid var(--color-border);
 	}
 
-	.heatmap-help {
+	.calendar-heatmap .heatmap-help,
+	.calendar-heatmap .heatmap-loading,
+	.calendar-heatmap .heatmap-fallback {
 		margin: 0 0 0.75rem;
 		color: var(--color-text-secondary);
 		font-size: 0.8125rem;
 	}
 
-	.heatmap-body {
+	.calendar-heatmap .heatmap-loading,
+	.calendar-heatmap .heatmap-fallback {
+		margin-bottom: 0;
+	}
+
+	.calendar-heatmap .heatmap-body {
 		display: flex;
 		gap: 4px;
 	}
 
-	.dow-labels {
+	.calendar-heatmap .dow-labels {
 		display: grid;
 		grid-template-rows: repeat(7, var(--cell-size));
 		gap: var(--cell-gap);
 		padding-top: 20px;
 	}
 
-	.dow-label {
+	.calendar-heatmap .dow-label {
 		padding-right: 4px;
 		color: var(--color-text-secondary);
 		font-size: 0.6875rem;
@@ -218,27 +135,27 @@ const totalWeeks = weeks.length;
 		text-align: right;
 	}
 
-	.heatmap-scroll {
+	.calendar-heatmap .heatmap-scroll {
 		flex: 1;
 		min-width: 0;
 		overflow-x: auto;
 	}
 
-	.month-row {
+	.calendar-heatmap .month-row {
 		display: grid;
 		gap: 0 var(--cell-gap);
 		height: 16px;
 		margin-bottom: 4px;
 	}
 
-	.month-label {
+	.calendar-heatmap .month-label {
 		color: var(--color-text-secondary);
 		font-size: 0.6875rem;
 		line-height: 16px;
 		white-space: nowrap;
 	}
 
-	.cell-grid {
+	.calendar-heatmap .cell-grid {
 		display: grid;
 		grid-template-rows: repeat(7, var(--cell-size));
 		grid-auto-flow: column;
@@ -246,51 +163,51 @@ const totalWeeks = weeks.length;
 		gap: var(--cell-gap);
 	}
 
-	.heatmap-cell,
-	.legend-cell {
+	.calendar-heatmap .heatmap-cell,
+	.calendar-heatmap .legend-cell {
 		display: block;
 		width: var(--cell-size);
 		height: var(--cell-size);
 		border-radius: 3px;
 	}
 
-	.level-0 {
+	.calendar-heatmap .level-0 {
 		background-color: var(--color-heatmap-empty);
 	}
 
-	.level-1 {
+	.calendar-heatmap .level-1 {
 		background-color: var(--color-heatmap-l1);
 	}
 
-	.level-2 {
+	.calendar-heatmap .level-2 {
 		background-color: var(--color-heatmap-l2);
 	}
 
-	.level-3 {
+	.calendar-heatmap .level-3 {
 		background-color: var(--color-heatmap-l3);
 	}
 
-	.level-4 {
+	.calendar-heatmap .level-4 {
 		background-color: var(--color-heatmap-l4);
 	}
 
-	a.heatmap-cell {
+	.calendar-heatmap a.heatmap-cell {
 		cursor: pointer;
 		text-decoration: none;
 	}
 
-	a.heatmap-cell:hover,
-	a.heatmap-cell:focus-visible {
+	.calendar-heatmap a.heatmap-cell:hover,
+	.calendar-heatmap a.heatmap-cell:focus-visible {
 		outline: 2px solid var(--color-text);
 		outline-offset: -2px;
 	}
 
-	.heatmap-cell.selected {
+	.calendar-heatmap .heatmap-cell.selected {
 		outline: 2px solid var(--color-accent);
 		outline-offset: -2px;
 	}
 
-	.heatmap-legend {
+	.calendar-heatmap .heatmap-legend {
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
@@ -298,25 +215,25 @@ const totalWeeks = weeks.length;
 		margin-top: 0.75rem;
 	}
 
-	.legend-text {
+	.calendar-heatmap .legend-text {
 		margin: 0 2px;
 		color: var(--color-text-secondary);
 		font-size: 0.6875rem;
 	}
 
-	.legend-cell {
+	.calendar-heatmap .legend-cell {
 		--cell-size: 12px;
 		display: inline-block;
 	}
 
 	@media (max-width: 640px) {
 		.calendar-heatmap > summary,
-		.heatmap-content {
+		.calendar-heatmap .heatmap-content {
 			padding-right: 0.75rem;
 			padding-left: 0.75rem;
 		}
 
-		.dow-labels {
+		.calendar-heatmap .dow-labels {
 			display: none;
 		}
 	}

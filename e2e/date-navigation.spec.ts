@@ -23,6 +23,7 @@ test.describe("Date Navigation", () => {
 		});
 
 		await page.goto("/trending/2026-02-12");
+		await expect(page.locator(".calendar-heatmap .heatmap-cell")).toHaveCount(0);
 		await expect(page.locator('.date-nav-btn[data-action="prev"]')).toBeEnabled();
 		await expect(page.locator('.date-nav-btn[data-action="prev"]')).toHaveAttribute(
 			"href",
