@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { GET as getTrending } from "../src/pages/api/trending/[date]";
-import { GET as getDates } from "../src/pages/api/dates";
-import { GET as getWeeklyTrending } from "../src/pages/api/trending/week/[date]";
-import { GET as getSearch } from "../src/pages/api/search";
 import { GET as getCompare } from "../src/pages/api/compare";
+import { GET as getDates } from "../src/pages/api/dates";
 import { GET as getLanguages } from "../src/pages/api/languages/[date]";
 import { GET as getWeeklyLanguages } from "../src/pages/api/languages/week/[date]";
+import { GET as getSearch } from "../src/pages/api/search";
+import { GET as getTrending } from "../src/pages/api/trending/[date]";
+import { GET as getWeeklyTrending } from "../src/pages/api/trending/week/[date]";
 
 // ── Mock todayUTC to a fixed Wednesday for deterministic tests ────────
 // 2026-02-11 is a Wednesday, so current week = Mon Feb 9 – Sun Feb 15.
@@ -574,10 +574,9 @@ describe("GET /api/search", () => {
 				...sampleRepo(),
 				topics_json: '["react","frontend"]',
 				dates_csv: "2026-02-03,2026-02-05,2026-02-04",
+				total: 1,
 			};
-			const { db } = mockDB({
-				queryResultsByIndex: { 0: [{ total: 1 }], 1: [row] },
-			});
+			const { db, calls } = mockDB({ queryResults: [row] });
 			const url = new URL("http://localhost/api/search?q=react");
 			const res = await getSearch(apiContext({ db, url }));
 
@@ -590,6 +589,7 @@ describe("GET /api/search", () => {
 			expect(body.results[0].repo_name).toBe("react");
 			expect(body.results[0].dates).toEqual(["2026-02-05", "2026-02-04", "2026-02-03"]);
 			expect(body.total).toBe(1);
+			expect(calls.prepare).toHaveLength(1);
 		});
 
 		it("returns honest totals with server pagination", async () => {
@@ -604,10 +604,9 @@ describe("GET /api/search", () => {
 				stars_today: 10,
 				topics_json: "[]",
 				dates_csv: "2026-02-05",
+				total: 60,
 			}));
-			const { db } = mockDB({
-				queryResultsByIndex: { 0: [{ total: 60 }], 1: rows },
-			});
+			const { db, calls } = mockDB({ queryResults: rows });
 			const url = new URL("http://localhost/api/search?q=repo");
 			const res = await getSearch(apiContext({ db, url }));
 
@@ -621,6 +620,7 @@ describe("GET /api/search", () => {
 			expect(body.results).toHaveLength(20);
 			expect(body.page_size).toBe(20);
 			expect(body.total_pages).toBe(3);
+			expect(calls.prepare).toHaveLength(1);
 		});
 
 		it("supports exact topic filters without a text query", async () => {
@@ -628,10 +628,9 @@ describe("GET /api/search", () => {
 				...sampleRepo(),
 				topics_json: '["react"]',
 				dates_csv: "2026-02-05",
+				total: 1,
 			};
-			const { db, calls } = mockDB({
-				queryResultsByIndex: { 0: [{ total: 1 }], 1: [row] },
-			});
+			const { db, calls } = mockDB({ queryResults: [row] });
 			const url = new URL("http://localhost/api/search?topic=react");
 			const res = await getSearch(apiContext({ db, url }));
 

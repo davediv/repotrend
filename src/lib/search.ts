@@ -1,5 +1,5 @@
 import { isValidDate } from "./dates";
-import { paginate, parsePageParam, type PaginationInfo } from "./pagination";
+import { type PaginationInfo, paginate, parsePageParam } from "./pagination";
 import type { SearchFilters, SearchResult } from "./search-types";
 import { parseTopicsJson } from "./trending";
 
@@ -19,10 +19,6 @@ export interface SearchArchiveResult {
 	pagination: PaginationInfo;
 }
 
-interface SearchCountRow {
-	total: number;
-}
-
 interface SearchRow {
 	repo_owner: string;
 	repo_name: string;
@@ -34,6 +30,7 @@ interface SearchRow {
 	stars_today: number;
 	topics_json: string | null;
 	dates_csv: string;
+	total: number;
 }
 
 /** Escape SQL LIKE metacharacters (`%`, `_`, and the escape character). */
@@ -189,38 +186,44 @@ export async function searchArchive(
 	filters: SearchFilters,
 ): Promise<SearchArchiveResult> {
 	const bindings = searchBindings(filters);
-	const { results: countRows } = await db
-		.prepare(`${SEARCH_CTE} SELECT COUNT(*) AS total FROM matched`)
-		.bind(...bindings)
-		.all<SearchCountRow>();
-	const total = Number(countRows[0]?.total ?? 0);
-	const pagination = paginate(total, filters.page, SEARCH_PAGE_SIZE);
-
-	if (total === 0) return { results: [], pagination };
-
 	const { results: rows } = await db
 		.prepare(
-			`${SEARCH_CTE}
+			`${SEARCH_CTE},
+			stats AS (
+				SELECT COUNT(*) AS total
+				FROM matched
+			)
 			SELECT
-				repo_owner,
-				repo_name,
-				description,
-				language,
-				language_color,
-				total_stars,
-				forks,
-				stars_today,
-				topics_json,
-				dates_csv
+				matched.repo_owner,
+				matched.repo_name,
+				matched.description,
+				matched.language,
+				matched.language_color,
+				matched.total_stars,
+				matched.forks,
+				matched.stars_today,
+				matched.topics_json,
+				matched.dates_csv,
+				stats.total
 			FROM matched
+			CROSS JOIN stats
 			ORDER BY relevance ASC, latest_appearance DESC, total_stars DESC
-			LIMIT ?8 OFFSET ?9`,
+			LIMIT ?8
+			OFFSET MIN(
+				(?9 - 1) * ?8,
+				MAX(
+					0,
+					CAST(((SELECT total FROM stats) - 1) / ?8 AS INTEGER) * ?8
+				)
+			)`,
 		)
-		.bind(...bindings, SEARCH_PAGE_SIZE, pagination.startIndex)
+		.bind(...bindings, SEARCH_PAGE_SIZE, filters.page)
 		.all<SearchRow>();
+	const total = Number(rows[0]?.total ?? 0);
+	const pagination = paginate(total, filters.page, SEARCH_PAGE_SIZE);
 
 	return {
-		results: rows.map(({ topics_json, dates_csv, ...repository }) => ({
+		results: rows.map(({ topics_json, dates_csv, total: _, ...repository }) => ({
 			...repository,
 			topics: parseTopicsJson(topics_json),
 			dates: dates_csv

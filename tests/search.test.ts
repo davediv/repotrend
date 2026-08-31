@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { escapeSearchLike, parseSearchRequest } from "../src/lib/search";
+import { escapeSearchLike, parseSearchRequest, searchArchive } from "../src/lib/search";
+import type { SearchFilters } from "../src/lib/search-types";
 
 describe("parseSearchRequest", () => {
 	it("allows structured filters without a text query", () => {
@@ -29,5 +30,64 @@ describe("parseSearchRequest", () => {
 describe("escapeSearchLike", () => {
 	it("escapes wildcards and the SQL escape character", () => {
 		expect(escapeSearchLike("100%_done\\now")).toBe("100\\%\\_done\\\\now");
+	});
+});
+
+describe("searchArchive", () => {
+	it("returns results and their total with one database query", async () => {
+		const prepared: string[] = [];
+		const bindings: unknown[][] = [];
+		const db = {
+			prepare(sql: string) {
+				prepared.push(sql);
+				const statement = {
+					bind(...values: unknown[]) {
+						bindings.push(values);
+						return statement;
+					},
+					async all() {
+						return {
+							results: [
+								{
+									repo_owner: "facebook",
+									repo_name: "react",
+									description: "UI library",
+									language: "JavaScript",
+									language_color: "#f1e05a",
+									total_stars: 200_000,
+									forks: 40_000,
+									stars_today: 100,
+									topics_json: '["react"]',
+									dates_csv: "2026-02-15,2026-02-14",
+									total: 1,
+								},
+							],
+						};
+					},
+				};
+				return statement;
+			},
+		} as unknown as D1Database;
+		const filters: SearchFilters = {
+			query: "react",
+			topic: "",
+			language: "",
+			from: "",
+			to: "",
+			page: 1,
+		};
+
+		const result = await searchArchive(db, filters);
+
+		expect(prepared).toHaveLength(1);
+		expect(prepared[0]).toContain("stats AS");
+		expect(bindings[0].slice(-2)).toEqual([20, 1]);
+		expect(result.pagination).toMatchObject({ totalItems: 1, currentPage: 1 });
+		expect(result.results[0]).toMatchObject({
+			repo_owner: "facebook",
+			repo_name: "react",
+			topics: ["react"],
+			dates: ["2026-02-15", "2026-02-14"],
+		});
 	});
 });

@@ -129,6 +129,12 @@ test.describe("Search", () => {
 		await expect(page.locator(".search-result-card")).toHaveCount(20);
 		await expect(page.locator(".results-count")).toContainText("of 26 matching repositories");
 		await expect(page.locator(".pagination-next")).toHaveAttribute("href", /page=2/);
+
+		await page.goto("/search?from=2026-02-09&to=2026-02-15&page=999");
+		await expect(page.locator(".search-result-card")).toHaveCount(6);
+		await expect(page.locator(".results-count")).toContainText(
+			"Showing 21–26 of 26 matching repositories",
+		);
 	});
 
 	test("waits for explicit submission before running a text search", async ({ page }) => {
