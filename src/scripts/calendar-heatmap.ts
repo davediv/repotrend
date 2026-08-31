@@ -1,4 +1,3 @@
-import { formatWeekRange, getMondayOfWeek, parseDate, toDateString } from "../lib/dates";
 import type { DateRepoCount } from "../lib/trending";
 
 const DOW_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
@@ -13,6 +12,52 @@ const tooltipFormatter = new Intl.DateTimeFormat("en-US", {
 interface Cell {
 	date: string;
 	count: number;
+}
+
+/*
+ * These small date helpers intentionally stay local to this optional module.
+ * Sharing the eager DatePicker helpers would split them into another startup
+ * request even though the heatmap itself is not needed until it is opened.
+ */
+function parseDate(date: string): Date {
+	const [year, month, day] = date.split("-").map(Number);
+	return new Date(year, month - 1, day);
+}
+
+function toDateString(date: Date): string {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+}
+
+function getMondayOfWeek(date: string): string {
+	const parsed = parseDate(date);
+	const dayOfWeek = parsed.getDay();
+	const offset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+	parsed.setDate(parsed.getDate() + offset);
+	return toDateString(parsed);
+}
+
+function formatWeekRange(date: string): string {
+	const monday = parseDate(getMondayOfWeek(date));
+	const sunday = new Date(monday);
+	sunday.setDate(sunday.getDate() + 6);
+	const crossYear = monday.getFullYear() !== sunday.getFullYear();
+	const mondayFormatter = new Intl.DateTimeFormat("en-US", {
+		month: "short",
+		day: "numeric",
+		...(crossYear && { year: "numeric" }),
+	});
+	const sundayFormatter =
+		monday.getFullYear() === sunday.getFullYear() && monday.getMonth() === sunday.getMonth()
+			? new Intl.DateTimeFormat("en-US", { day: "numeric", year: "numeric" })
+			: new Intl.DateTimeFormat("en-US", {
+					month: "short",
+					day: "numeric",
+					year: "numeric",
+				});
+	return `${mondayFormatter.format(monday)} – ${sundayFormatter.format(sunday)}`;
 }
 
 function parseDateCounts(value: string | undefined): DateRepoCount[] {
